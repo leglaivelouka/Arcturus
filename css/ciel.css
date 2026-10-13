@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 body { background: #040815; }
@@ -12,6 +14,18 @@ body { background: #040815; }
 
 #ciel:active { cursor: grabbing; }
 
+/* Mode nuit : tout passe en nuances de rouge pour préserver la vision nocturne. */
+body.nuit #ciel { filter: grayscale(1); }
+
+.voile {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #d01818;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
 .horloge {
   position: fixed;
   left: 1rem;
@@ -24,8 +38,10 @@ body { background: #040815; }
 .horloge p:first-child { font-size: 1.4rem; font-weight: 500; font-variant-numeric: tabular-nums; }
 .horloge p:last-child { font-size: 1.1rem; font-weight: 500; }
 
+/* ---------- Bouton menu et panneau ---------- */
 .menu {
   position: fixed;
+  z-index: 20;
   top: calc(0.8rem + env(safe-area-inset-top, 0px));
   right: 0.8rem;
   width: 2.9rem;
@@ -44,15 +60,97 @@ body { background: #040815; }
 
 .panneau {
   position: fixed;
-  top: calc(3.9rem + env(safe-area-inset-top, 0px));
+  z-index: 20;
+  top: calc(0.8rem + env(safe-area-inset-top, 0px));
+  left: 0.8rem;
   right: 0.8rem;
-  padding: 0.9rem 1.1rem;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #a9e3c4, #9db7ea);
+  max-width: 420px;
+  margin: 0 auto;
+  display: grid;
+  gap: 0.6rem;
   color: #14202e;
 }
 
-.panneau a { color: inherit; font-weight: 500; text-decoration: none; }
+.reglages,
+.temps {
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
+}
+
+.reglages {
+  padding: 0.7rem 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem 0.2rem;
+}
+
+.reglage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: inherit;
+  cursor: pointer;
+}
+
+.reglage .ico {
+  font-size: 1.9rem;
+  line-height: 1;
+  filter: grayscale(1) brightness(0.3);
+}
+
+.reglage[aria-pressed="false"] { opacity: 0.4; }
+.reglage:disabled { opacity: 0.25; cursor: default; }
+
+.reglage:focus-visible,
+.fleches button:focus-visible,
+.engrenage:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
+
+.bas-panneau { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+
+.temps { flex: 1; max-width: 17rem; padding: 0.5rem 0.9rem; display: grid; gap: 0.15rem; }
+
+.ligne-temps { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
+.ligne-temps output { font-size: 1.25rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.fleches { display: flex; align-items: center; }
+
+.fleches button {
+  min-width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.engrenage {
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.engrenage span { filter: grayscale(1) brightness(0.3); }
+
+/* ---------- Fenêtre des réglages de la carte ---------- */
+.champ { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
+dialog input[type="range"] { width: 100%; accent-color: #9db7ea; margin-bottom: 1rem; }
+.bouton.lien { display: block; text-align: center; text-decoration: none; }
 
 .message-ciel {
   position: fixed;

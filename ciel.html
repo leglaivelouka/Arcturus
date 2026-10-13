@@ -16,18 +16,57 @@
 
   <p id="message-ciel" class="message-ciel" role="status" hidden></p>
 
-  <div class="horloge">
+  <div id="horloge" class="horloge">
     <p id="ciel-heure">00:00</p>
     <p id="ciel-date">00/00/0000</p>
   </div>
 
-  <button id="btn-menu" class="menu" type="button" aria-label="Menu de la carte" aria-expanded="false" aria-controls="panneau">
+  <button id="btn-menu" class="menu" type="button" aria-label="Réglages d'affichage" aria-expanded="false" aria-controls="panneau">
     <span></span><span></span><span></span>
   </button>
 
   <div id="panneau" class="panneau" hidden>
-    <a href="index.html">retour à l'accueil</a>
+    <div class="reglages" role="group" aria-label="Éléments affichés sur la carte">
+      <button type="button" class="reglage" data-reglage="paysage" aria-pressed="true"><span class="ico" aria-hidden="true">🌲</span>paysage</button>
+      <button type="button" class="reglage" data-reglage="constellations" aria-pressed="true" disabled title="Bientôt disponible"><span class="ico" aria-hidden="true">✨</span>constellations</button>
+      <button type="button" class="reglage" data-reglage="atmosphere" aria-pressed="true"><span class="ico" aria-hidden="true">☁️</span>atmosphère</button>
+      <button type="button" class="reglage" data-reglage="nuit" aria-pressed="false"><span class="ico" aria-hidden="true">👁️</span>mode nuit</button>
+      <button type="button" class="reglage" data-reglage="noms" aria-pressed="true"><span class="ico" aria-hidden="true">🏷️</span>noms</button>
+      <button type="button" class="reglage" data-reglage="lignes" aria-pressed="false"><span class="ico" aria-hidden="true">🌐</span>lignes</button>
+    </div>
+
+    <div class="bas-panneau">
+      <div class="temps">
+        <div class="ligne-temps">
+          <output id="reg-heure">00:00</output>
+          <span class="fleches">
+            <button type="button" id="h-moins" aria-label="Reculer de 10 minutes">&lt;</button>
+            <button type="button" id="h-reset" aria-label="Revenir à l'heure actuelle">↺</button>
+            <button type="button" id="h-plus" aria-label="Avancer de 10 minutes">&gt;</button>
+          </span>
+        </div>
+        <div class="ligne-temps">
+          <output id="reg-date">00/00/0000</output>
+          <span class="fleches">
+            <button type="button" id="d-moins" aria-label="Reculer d'un jour">&lt;</button>
+            <button type="button" id="d-reset" aria-label="Revenir à la date actuelle">↺</button>
+            <button type="button" id="d-plus" aria-label="Avancer d'un jour">&gt;</button>
+          </span>
+        </div>
+      </div>
+      <button type="button" id="btn-reglages" class="engrenage" aria-label="Réglages de la carte"><span aria-hidden="true">⚙️</span></button>
+    </div>
   </div>
+
+  <dialog id="dialogue-carte" aria-labelledby="titre-carte">
+    <h2 id="titre-carte">Réglages de la carte</h2>
+    <label class="champ" for="mag-limite">Étoiles visibles jusqu'à la magnitude <output id="mag-valeur">6,5</output></label>
+    <input id="mag-limite" type="range" min="3" max="6.5" step="0.1" value="6.5">
+    <a class="bouton lien" href="index.html">retour à l'accueil</a>
+    <button id="btn-fermer-carte" class="bouton discret" type="button">Fermer</button>
+  </dialog>
+
+  <div id="voile" class="voile" hidden></div>
 
   <script src="js/astro.js"></script>
   <script src="js/ciel.js"></script>

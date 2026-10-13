@@ -84,7 +84,45 @@
     return "rgb(255,165,115)";
   }
 
-  const Astro = { jourJulien, tempsSideralLocal, versHorizon, azimutHauteur, baseCamera, projeter, cercleHorizon, couleurBV };
+
+  /* Position du Soleil (formule simplifiée, précision d'environ 0,01°) : ascension droite et déclinaison en degrés. */
+  function positionSoleil(date) {
+    const n = jourJulien(date) - 2451545.0;
+    const L = 280.46 + 0.9856474 * n;
+    const g = (357.528 + 0.9856003 * n) * RAD;
+    const lambda = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD;
+    const eps = (23.439 - 0.0000004 * n) * RAD;
+    const ra = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda)) / RAD;
+    return { ra: (ra + 360) % 360, dec: Math.asin(Math.sin(eps) * Math.sin(lambda)) / RAD };
+  }
+
+  /* Couleurs du ciel (haut et horizon) selon la hauteur du Soleil, en degrés. */
+  const CIEL = [
+    [-18, [4, 8, 21], [14, 26, 58]],
+    [-12, [8, 18, 50], [38, 40, 92]],
+    [-6, [24, 44, 100], [170, 100, 110]],
+    [0, [50, 90, 170], [236, 150, 100]],
+    [8, [47, 111, 208], [140, 195, 240]],
+  ];
+  function couleursCiel(hauteurSoleil) {
+    const h = Math.max(CIEL[0][0], Math.min(CIEL[CIEL.length - 1][0], hauteurSoleil));
+    let i = 1;
+    while (i < CIEL.length - 1 && h > CIEL[i][0]) i++;
+    const [h0, haut0, bas0] = CIEL[i - 1];
+    const [h1, haut1, bas1] = CIEL[i];
+    const k = (h - h0) / (h1 - h0);
+    const mel = (a, b) => `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * k)).join(",")})`;
+    return { haut: mel(haut0, haut1), bas: mel(bas0, bas1) };
+  }
+
+  /* Magnitude de l'étoile la plus faible visible selon la hauteur du Soleil (atmosphère activée). */
+  function magnitudeLimite(hauteurSoleil, magMax) {
+    if (hauteurSoleil <= -18) return magMax;
+    if (hauteurSoleil >= -2) return -99;
+    return Math.min(magMax, magMax - 0.55 * (hauteurSoleil + 18));
+  }
+
+  const Astro = { jourJulien, tempsSideralLocal, versHorizon, azimutHauteur, baseCamera, projeter, cercleHorizon, couleurBV, positionSoleil, couleursCiel, magnitudeLimite };
   racine.Astro = Astro;
   if (typeof module !== "undefined") module.exports = Astro;
 })(typeof window !== "undefined" ? window : globalThis);
