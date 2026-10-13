@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcturus : préparer le catalogue d'étoiles</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; background: #120b24; color: #fff; }
+    button, input { font: inherit; }
+    button { padding: 0.6rem 1.1rem; border: 0; border-radius: 12px; background: #7b63e8; color: #fff; cursor: pointer; }
+    #resultat { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Préparer le catalogue d'étoiles</h1>
+  <p>1. Télécharge le catalogue HYG au format CSV sur astronexus.com/hyg.</p>
+  <p>2. Choisis ce fichier ci-dessous.</p>
+  <p><input id="fichier" type="file" accept=".csv,text/csv"></p>
+  <div id="resultat" role="status"></div>
+
+  <script src="convertir.js"></script>
+  <script>
+    const zone = document.getElementById("resultat");
+    document.getElementById("fichier").addEventListener("change", (e) => {
+      const fichier = e.target.files[0];
+      if (!fichier) return;
+      zone.textContent = "Lecture du fichier…";
+      const lecteur = new FileReader();
+      lecteur.onerror = () => { zone.textContent = "Impossible de lire ce fichier."; };
+      lecteur.onload = () => {
+        try {
+          const r = ConvertirEtoiles.convertir(lecteur.result);
+          const lien = document.createElement("a");
+          lien.href = URL.createObjectURL(new Blob([r.json], { type: "application/json" }));
+          lien.download = "etoiles.json";
+          const bouton = document.createElement("button");
+          bouton.type = "button";
+          bouton.textContent = "Télécharger etoiles.json";
+          bouton.addEventListener("click", () => lien.click());
+          const p = document.createElement("p");
+          p.textContent = `${r.nbEtoiles} étoiles gardées (dont ${r.nbNoms} avec un nom), environ ${Math.round(r.taille / 1024)} Ko. Place le fichier dans le dossier data de ton projet.`;
+          zone.replaceChildren(p, bouton);
+        } catch (erreur) {
+          zone.textContent = erreur.message;
+        }
+      };
+      lecteur.readAsText(fichier);
+    });
+  </script>
+</body>
+</html>
