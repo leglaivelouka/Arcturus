@@ -1,0 +1,12 @@
+[
+  { "nom": "Quadrantides",  "mois": 1,  "jour": 3,  "info": "Pluie d'étoiles filantes" },
+  { "nom": "Lyrides",       "mois": 4,  "jour": 22, "info": "Pluie d'étoiles filantes" },
+  { "nom": "Êta Aquarides", "mois": 5,  "jour": 6,  "info": "Pluie d'étoiles filantes" },
+  { "nom": "Perséides",     "mois": 8,  "jour": 12, "info": "Pluie d'étoiles filantes" },
+  { "nom": "Draconides",    "mois": 10, "jour": 8,  "info": "Pluie d'étoiles filantes" },
+  { "nom": "Orionides",     "mois": 10, "jour": 21, "info": "Pluie d'étoiles filantes" },
+  { "nom": "Taurides",      "mois": 11, "jour": 5,  "info": "Pluie d'étoiles filantes" },
+  { "nom": "Léonides",      "mois": 11, "jour": 17, "info": "Pluie d'étoiles filantes" },
+  { "nom": "Géminides",     "mois": 12, "jour": 14, "info": "Pluie d'étoiles filantes" },
+  { "nom": "Ursides",       "mois": 12, "jour": 22, "info": "Pluie d'étoiles filantes" }
+]

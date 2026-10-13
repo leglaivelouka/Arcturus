@@ -1,0 +1,228 @@
+:root {
+  --nuit: #0b0718;
+  --bleu: #3f4fd6;
+  --violet: #7b63e8;
+  --rose: #cf5aae;
+  --blanc: #ffffff;
+  --degrade: linear-gradient(100deg, var(--bleu), var(--violet) 55%, var(--rose));
+  --police: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--police);
+  color: var(--blanc);
+  background-color: var(--nuit);
+  /* Si assets/fond.jpg est absent, le dégradé sert de fond. */
+  background-image:
+    url("../assets/fond.jpg"),
+    radial-gradient(ellipse at 30% 15%, #3a1d5c 0%, #150b2b 45%, var(--nuit) 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+h1, h2, p { margin: 0; }
+
+a, button { font-family: inherit; color: inherit; }
+
+:focus-visible { outline: 3px solid var(--blanc); outline-offset: 3px; }
+
+/* ---------- Écran mobile ---------- */
+.ecran {
+  max-width: 430px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+/* ---------- Titre et boutons ---------- */
+.titre {
+  background: linear-gradient(100deg, #2a3aa8, var(--violet));
+  border-radius: 20px;
+  padding: 0.7rem 1.3rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #e8e6f5;
+}
+
+.hexagone {
+  background: var(--degrade);
+  border: 0;
+  clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%);
+  padding: 0.7rem 2.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.pastille {
+  background: linear-gradient(100deg, #2a3aa8, var(--rose));
+  border-radius: 999px;
+  padding: 0.5rem 2.2rem;
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+/* ---------- Ligne heure + météo ---------- */
+.ligne {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, 45%);
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.heure {
+  font-size: clamp(2.4rem, 12vw, 3.4rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- Cartes ---------- */
+.carte {
+  background: var(--degrade);
+  border-radius: 22px;
+  padding: 0.9rem 1rem;
+}
+
+.carte h2 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.6rem;
+}
+
+.meteo { min-height: 130px; }
+
+.mesures { display: grid; gap: 0.5rem; }
+
+.mesure { display: flex; flex-direction: column; line-height: 1.2; }
+.mesure span { font-size: 0.78rem; font-weight: 500; opacity: 0.9; }
+.mesure strong { font-size: 1.05rem; font-weight: 700; }
+
+.vide { font-size: 0.85rem; line-height: 1.35; }
+
+.actus { width: 100%; min-height: 130px; }
+
+.evenements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.evenements li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.evenements strong { display: block; font-size: 0.95rem; font-weight: 700; }
+.evenements small { font-size: 0.78rem; opacity: 0.9; }
+.evenements .quand { font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
+
+/* ---------- Barre du bas ---------- */
+.barre {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.3rem;
+}
+
+.barre a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+.icone {
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 2.6rem;
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, var(--rose), var(--violet));
+  clip-path: polygon(15% 0, 100% 0, 85% 100%, 0 100%);
+}
+
+/* ---------- Fenêtre de choix de position ---------- */
+dialog {
+  width: min(92vw, 380px);
+  padding: 1.2rem;
+  border: 0;
+  border-radius: 22px;
+  background: #1a1030;
+  color: var(--blanc);
+}
+
+dialog::backdrop { background: rgba(5, 2, 12, 0.7); }
+
+dialog h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+
+.bouton {
+  background: var(--degrade);
+  border: 0;
+  border-radius: 14px;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bouton.discret { background: transparent; border: 1px solid rgba(255, 255, 255, 0.4); width: 100%; margin-top: 0.8rem; }
+
+#btn-gps { width: 100%; }
+
+.ou { text-align: center; margin: 0.7rem 0; font-size: 0.85rem; opacity: 0.8; }
+
+.recherche { display: flex; gap: 0.5rem; }
+
+.recherche input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--blanc);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.message { min-height: 1.3rem; margin-top: 0.7rem; font-size: 0.85rem; }
+
+.resultats { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+
+.resultats button {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  background: transparent;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ---------- Pages à venir ---------- */
+.bientot { justify-content: center; text-align: center; }
+.bientot h1 { font-size: 1.5rem; }
+.bientot p { opacity: 0.85; }
