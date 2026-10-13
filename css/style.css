@@ -17,7 +17,7 @@ body {
   background-color: var(--nuit);
   /* Si assets/fond.jpg est absent, le dégradé sert de fond. */
   background-image:
-    url("../assets/fond.jpg"),
+    url("../assets/fond.jpg (2).png"),
     radial-gradient(ellipse at 30% 15%, #3a1d5c 0%, #150b2b 45%, var(--nuit) 100%);
   background-size: cover;
   background-position: center;
