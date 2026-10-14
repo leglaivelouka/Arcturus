@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcturus : préparer les constellations</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; background: #120b24; color: #fff; }
+    button, input { font: inherit; }
+    button { padding: 0.6rem 1.1rem; border: 0; border-radius: 12px; background: #7b63e8; color: #fff; cursor: pointer; }
+    a { color: #9fc2ff; }
+    #resultat { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Préparer les constellations</h1>
+  <p>Ce fichier crée <strong>constellations.json</strong>, à placer dans le dossier <strong>data</strong> du projet.</p>
+
+  <p><button id="recuperer" type="button">Récupérer les tracés en ligne</button></p>
+
+  <p>Si la récupération échoue, ouvre
+    <a href="https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.lines.json" target="_blank" rel="noopener">ce fichier</a>,
+    enregistre-le sur ton ordinateur (clic droit, Enregistrer sous), puis choisis-le ici :</p>
+  <p><input id="fichier" type="file" accept=".json,.txt,application/json,text/plain"></p>
+
+  <div id="resultat" role="status"></div>
+
+  <script src="convertir-constellations.js"></script>
+  <script>
+    const URL_TRACES = "https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/constellations.lines.json";
+    const zone = document.getElementById("resultat");
+
+    function traiter(texte) {
+      try {
+        const r = ConvertirConstellations.convertir(texte);
+        const lien = document.createElement("a");
+        lien.href = URL.createObjectURL(new Blob([r.json], { type: "application/json" }));
+        lien.download = "constellations.json";
+        const bouton = document.createElement("button");
+        bouton.type = "button";
+        bouton.textContent = "Télécharger constellations.json";
+        bouton.addEventListener("click", () => lien.click());
+        const p = document.createElement("p");
+        p.textContent = `${r.nb} constellations prêtes, environ ${Math.round(r.taille / 1024)} Ko. Place le fichier dans le dossier data de ton projet.`;
+        zone.replaceChildren(p, bouton);
+      } catch (erreur) {
+        zone.textContent = erreur.message;
+      }
+    }
+
+    document.getElementById("recuperer").addEventListener("click", async () => {
+      zone.textContent = "Téléchargement des tracés…";
+      try {
+        const rep = await fetch(URL_TRACES);
+        if (!rep.ok) throw new Error("HTTP " + rep.status);
+        traiter(await rep.text());
+      } catch {
+        zone.textContent = "Récupération impossible. Utilise la méthode manuelle ci-dessus.";
+      }
+    });
+
+    document.getElementById("fichier").addEventListener("change", (e) => {
+      const fichier = e.target.files[0];
+      if (!fichier) return;
+      const lecteur = new FileReader();
+      lecteur.onerror = () => { zone.textContent = "Impossible de lire ce fichier."; };
+      lecteur.onload = () => traiter(lecteur.result);
+      lecteur.readAsText(fichier);
+    });
+  </script>
+</body>
+</html>

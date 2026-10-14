@@ -39,6 +39,7 @@
 
   const etoiles = { n: 0, ra: null, cosDec: null, sinDec: null, mag: null, couleur: [] };
   let noms = []; // { ra, cosDec, sinDec, nom, mag }
+  const constellations = { n: 0, ra: null, cosDec: null, sinDec: null, sx: null, sy: null, vis: null, polylignes: [], noms: [] };
 
   /* ---------- Position (la même que sur l'accueil) et réglages mémorisés ---------- */
   function lirePosition() {
@@ -97,6 +98,12 @@
     }));
   }
 
+  function ajouterMessage(texte) {
+    const m = $("message-ciel");
+    m.textContent = m.textContent ? m.textContent + " " + texte : texte;
+    m.hidden = false;
+  }
+
   async function chargerEtoiles() {
     try {
       const rep = await fetch("data/etoiles.json");
@@ -106,9 +113,61 @@
       preparerNoms(donnees.noms || [], donnees.etoiles);
     } catch {
       preparer(ETOILES_DEMO.map(([ra, dec, mag, ci]) => [ra * 15, dec, mag, ci]));
-      const message = $("message-ciel");
-      message.textContent = "Catalogue d'étoiles absent : affichage de démonstration (20 étoiles).";
-      message.hidden = false;
+      ajouterMessage("Catalogue d'étoiles absent : affichage de démonstration (20 étoiles).");
+    }
+    aRedessiner = true;
+  }
+
+  /* Tracés des constellations : points uniques partagés entre les lignes, centre calculé pour le nom. */
+  function preparerConstellations(donnees) {
+    const cle = new Map();
+    const ras = [];
+    const decs = [];
+    const indice = (ra, dec) => {
+      const k = ra + "_" + dec;
+      let i = cle.get(k);
+      if (i === undefined) { i = ras.length; cle.set(k, i); ras.push(ra * RAD); decs.push(dec * RAD); }
+      return i;
+    };
+    const polylignes = [];
+    const nomsC = [];
+    for (const c of donnees.constellations) {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (const ligne of c.lignes) {
+        polylignes.push(ligne.map(([ra, dec]) => indice(ra, dec)));
+        for (const [ra, dec] of ligne) {
+          x += Math.cos(dec * RAD) * Math.cos(ra * RAD);
+          y += Math.cos(dec * RAD) * Math.sin(ra * RAD);
+          z += Math.sin(dec * RAD);
+        }
+      }
+      const norme = Math.hypot(x, y, z);
+      if (norme > 1e-6) {
+        const dec = Math.asin(z / norme);
+        nomsC.push({ nom: c.nom.toUpperCase(), ra: Math.atan2(y, x), cosDec: Math.cos(dec), sinDec: Math.sin(dec) });
+      }
+    }
+    const n = ras.length;
+    constellations.n = n;
+    constellations.ra = Float32Array.from(ras);
+    constellations.cosDec = Float32Array.from(decs, Math.cos);
+    constellations.sinDec = Float32Array.from(decs, Math.sin);
+    constellations.sx = new Float32Array(n);
+    constellations.sy = new Float32Array(n);
+    constellations.vis = new Uint8Array(n);
+    constellations.polylignes = polylignes;
+    constellations.noms = nomsC;
+  }
+
+  async function chargerConstellations() {
+    try {
+      const rep = await fetch("data/constellations.json");
+      if (!rep.ok) throw new Error("HTTP " + rep.status);
+      preparerConstellations(await rep.json());
+    } catch {
+      ajouterMessage("Tracés des constellations absents : ouvre outils/convertir-constellations.html pour les créer.");
     }
     aRedessiner = true;
   }
@@ -220,6 +279,56 @@
     return p;
   }
 
+  function dessinerConstellations(lst, sinLat, cosLat, base, echelle, cx, cy) {
+    const c = constellations;
+    const { r, u, f } = base;
+    for (let i = 0; i < c.n; i++) {
+      const H = lst - c.ra[i];
+      const cd = c.cosDec[i];
+      const sd = c.sinDec[i];
+      const e = -cd * Math.sin(H);
+      const n = sd * cosLat - cd * sinLat * Math.cos(H);
+      const h = sd * sinLat + cd * cosLat * Math.cos(H);
+      const z = e * f[0] + n * f[1] + h * f[2];
+      if (z < -0.9) { c.vis[i] = 0; continue; }
+      const k = (2 / (1 + z)) * echelle;
+      c.sx[i] = cx + (e * r[0] + n * r[1] + h * r[2]) * k;
+      c.sy[i] = cy - (e * u[0] + n * u[1] + h * u[2]) * k;
+      c.vis[i] = 1;
+    }
+
+    const maxSaut = 4 * Math.max(largeur, hauteur);
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "rgba(110, 190, 255, 0.75)";
+    ctx.beginPath();
+    for (const ligne of c.polylignes) {
+      let precedent = -1;
+      for (const i of ligne) {
+        if (!c.vis[i]) { precedent = -1; continue; }
+        if (precedent >= 0 && Math.hypot(c.sx[i] - c.sx[precedent], c.sy[i] - c.sy[precedent]) < maxSaut) ctx.lineTo(c.sx[i], c.sy[i]);
+        else ctx.moveTo(c.sx[i], c.sy[i]);
+        precedent = i;
+      }
+    }
+    ctx.stroke();
+
+    if (vue.fov < 12) return; // trop zoomé : les noms ne serviraient plus à rien
+    ctx.font = "600 12px Poppins, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(130, 215, 255, 0.95)";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "1px";
+    for (const nom of c.noms) {
+      const H = lst - nom.ra;
+      const cH = Math.cos(H);
+      const e = -nom.cosDec * Math.sin(H);
+      const n = nom.sinDec * cosLat - nom.cosDec * sinLat * cH;
+      const h = nom.sinDec * sinLat + nom.cosDec * cosLat * cH;
+      const p = versEcran([e, n, h], base, echelle, cx, cy);
+      if (p && p[0] > 20 && p[0] < largeur - 20 && p[1] > 20 && p[1] < hauteur - 20) ctx.fillText(nom.nom, p[0], p[1]);
+    }
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
   function dessiner() {
     aRedessiner = false;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -290,6 +399,11 @@
     }
     ctx.globalAlpha = 1;
 
+    /* Constellations : lignes et noms */
+    if (reglages.constellations && constellations.n > 0) {
+      dessinerConstellations(lst, sinLat, cosLat, base, echelle, cx, cy);
+    }
+
     /* Soleil */
     const pSoleil = dessinerSoleil(vSoleil, base, echelle, cx, cy, boost);
 
@@ -328,6 +442,9 @@
   }
 
   /* ---------- Heure et date ---------- */
+  const curseurHeure = $("curseur-heure");
+  let glisseHeure = false; // vrai tant que l'utilisateur manipule le curseur
+
   function heureSimulee() { return new Date(Date.now() + decalageMs); }
 
   function majHorloge() {
@@ -338,6 +455,10 @@
     $("ciel-date").textContent = date;
     $("reg-heure").textContent = heure;
     $("reg-date").textContent = date;
+    if (!glisseHeure) {
+      curseurHeure.value = String(d.getHours() * 60 + d.getMinutes());
+      curseurHeure.setAttribute("aria-valuetext", heure);
+    }
     aRedessiner = true; // le ciel tourne : on rafraîchit chaque seconde
   }
 
@@ -351,6 +472,23 @@
   }
 
   function revenirAMaintenant() { decalageMs = 0; majHorloge(); }
+
+  /* Curseur : règle l'heure de la journée affichée (de 0 h 00 à 23 h 59), la date ne change pas. */
+  function fixerMinutesDuJour(minutes) {
+    const d = heureSimulee();
+    d.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    decalageMs = d.getTime() - Date.now();
+    majHorloge();
+  }
+
+  curseurHeure.addEventListener("pointerdown", () => { glisseHeure = true; });
+  curseurHeure.addEventListener("input", () => {
+    glisseHeure = true;
+    fixerMinutesDuJour(Number(curseurHeure.value));
+  });
+  ["pointerup", "pointercancel", "change", "blur"].forEach((t) => {
+    curseurHeure.addEventListener(t, () => { glisseHeure = false; majHorloge(); });
+  });
 
   /* Appui maintenu : répète l'action, puis accélère. */
   function lierRepetition(bouton, action) {
@@ -490,6 +628,7 @@
   majHorloge();
   setInterval(majHorloge, 1000);
   chargerEtoiles();
+  chargerConstellations();
   (function boucle() {
     if (aRedessiner) dessiner();
     requestAnimationFrame(boucle);

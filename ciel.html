@@ -28,7 +28,7 @@
   <div id="panneau" class="panneau" hidden>
     <div class="reglages" role="group" aria-label="Éléments affichés sur la carte">
       <button type="button" class="reglage" data-reglage="paysage" aria-pressed="true"><span class="ico" aria-hidden="true">🌲</span>paysage</button>
-      <button type="button" class="reglage" data-reglage="constellations" aria-pressed="true" disabled title="Bientôt disponible"><span class="ico" aria-hidden="true">✨</span>constellations</button>
+      <button type="button" class="reglage" data-reglage="constellations" aria-pressed="true"><span class="ico" aria-hidden="true">✨</span>constellations</button>
       <button type="button" class="reglage" data-reglage="atmosphere" aria-pressed="true"><span class="ico" aria-hidden="true">☁️</span>atmosphère</button>
       <button type="button" class="reglage" data-reglage="nuit" aria-pressed="false"><span class="ico" aria-hidden="true">👁️</span>mode nuit</button>
       <button type="button" class="reglage" data-reglage="noms" aria-pressed="true"><span class="ico" aria-hidden="true">🏷️</span>noms</button>
@@ -55,6 +55,12 @@
         </div>
       </div>
       <button type="button" id="btn-reglages" class="engrenage" aria-label="Réglages de la carte"><span aria-hidden="true">⚙️</span></button>
+    </div>
+
+    <div class="barre-heure">
+      <label class="cache" for="curseur-heure">Heure de la journée</label>
+      <input id="curseur-heure" type="range" min="0" max="1439" step="1" value="0">
+      <div class="graduations" aria-hidden="true"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
     </div>
   </div>
 
