@@ -122,7 +122,43 @@
     return Math.min(magMax, magMax - 0.55 * (hauteurSoleil + 18));
   }
 
-  const Astro = { jourJulien, tempsSideralLocal, versHorizon, azimutHauteur, baseCamera, projeter, cercleHorizon, couleurBV, positionSoleil, couleursCiel, magnitudeLimite };
+  /* ---- Matrices 3x3 (tableaux à 9 valeurs, ligne par ligne) ---- */
+  function mulMat(a, b) {
+    const m = new Array(9);
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) m[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+    }
+    return m;
+  }
+
+  const rot3 = (a) => [Math.cos(a), Math.sin(a), 0, -Math.sin(a), Math.cos(a), 0, 0, 0, 1];
+  const rot2 = (a) => [Math.cos(a), 0, -Math.sin(a), 0, 1, 0, Math.sin(a), 0, Math.cos(a)];
+
+  /* Précession : repère équatorial J2000 -> équateur moyen de la date (formules IAU 1976). */
+  function matricePrecession(date) {
+    const T = (jourJulien(date) - 2451545.0) / 36525;
+    const sec = RAD / 3600;
+    const zeta = (2306.2181 * T + 0.30188 * T * T + 0.017998 * T * T * T) * sec;
+    const z = (2306.2181 * T + 1.09468 * T * T + 0.018203 * T * T * T) * sec;
+    const theta = (2004.3109 * T - 0.42665 * T * T - 0.041833 * T * T * T) * sec;
+    return mulMat(mulMat(rot3(-z), rot2(theta)), rot3(-zeta));
+  }
+
+  /* Équatorial de la date -> horizon [est, nord, haut], pour une latitude et un temps sidéral local (degrés). */
+  function matriceHorizon(latDeg, lstDeg) {
+    const sp = Math.sin(latDeg * RAD);
+    const cp = Math.cos(latDeg * RAD);
+    const sl = Math.sin(lstDeg * RAD);
+    const cl = Math.cos(lstDeg * RAD);
+    return [-sl, cl, 0, -sp * cl, -sp * sl, cp, cp * cl, cp * sl, sp];
+  }
+
+  /* Horizon -> repère de la caméra (droite, haut, avant). */
+  function matriceCamera(base) {
+    return [base.r[0], base.r[1], base.r[2], base.u[0], base.u[1], base.u[2], base.f[0], base.f[1], base.f[2]];
+  }
+
+  const Astro = { jourJulien, tempsSideralLocal, versHorizon, azimutHauteur, baseCamera, projeter, cercleHorizon, couleurBV, positionSoleil, couleursCiel, magnitudeLimite, mulMat, matricePrecession, matriceHorizon, matriceCamera };
   racine.Astro = Astro;
   if (typeof module !== "undefined") module.exports = Astro;
 })(typeof window !== "undefined" ? window : globalThis);

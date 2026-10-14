@@ -37,9 +37,9 @@
   const position = lirePosition();
   const reglages = lireReglages();
 
-  const etoiles = { n: 0, ra: null, cosDec: null, sinDec: null, mag: null, couleur: [] };
+  const etoiles = { n: 0, x: null, y: null, z: null, mag: null, couleur: [] };
   let noms = []; // { ra, cosDec, sinDec, nom, mag }
-  const constellations = { n: 0, ra: null, cosDec: null, sinDec: null, sx: null, sy: null, vis: null, polylignes: [], noms: [] };
+  const constellations = { n: 0, x: null, y: null, z: null, sx: null, sy: null, vis: null, polylignes: [], noms: [] };
 
   /* ---------- Position (la même que sur l'accueil) et réglages mémorisés ---------- */
   function lirePosition() {
@@ -69,19 +69,26 @@
   }
 
   /* ---------- Chargement des étoiles ---------- */
+  /* Vecteur unitaire équatorial (x vers le point vernal, z vers le pôle) à partir de RA et Dec en degrés. */
+  function vecteurEquatorial(raDeg, decDeg) {
+    const cd = Math.cos(decDeg * RAD);
+    return [cd * Math.cos(raDeg * RAD), cd * Math.sin(raDeg * RAD), Math.sin(decDeg * RAD)];
+  }
+
   function preparer(liste) {
     const n = liste.length;
     etoiles.n = n;
-    etoiles.ra = new Float32Array(n);
-    etoiles.cosDec = new Float32Array(n);
-    etoiles.sinDec = new Float32Array(n);
+    etoiles.x = new Float32Array(n);
+    etoiles.y = new Float32Array(n);
+    etoiles.z = new Float32Array(n);
     etoiles.mag = new Float32Array(n);
     etoiles.couleur = new Array(n);
     for (let i = 0; i < n; i++) {
       const [ra, dec, mag, ci] = liste[i];
-      etoiles.ra[i] = ra * RAD;
-      etoiles.cosDec[i] = Math.cos(dec * RAD);
-      etoiles.sinDec[i] = Math.sin(dec * RAD);
+      const v = vecteurEquatorial(ra, dec);
+      etoiles.x[i] = v[0];
+      etoiles.y[i] = v[1];
+      etoiles.z[i] = v[2];
       etoiles.mag[i] = mag;
       etoiles.couleur[i] = Astro.couleurBV(ci);
     }
@@ -89,13 +96,10 @@
 
   function preparerNoms(liste, etoilesBrutes) {
     const magParCle = new Map(etoilesBrutes.map((s) => [s[0] + "_" + s[1], s[2]]));
-    noms = liste.map(([ra, dec, nom]) => ({
-      ra: ra * RAD,
-      cosDec: Math.cos(dec * RAD),
-      sinDec: Math.sin(dec * RAD),
-      nom,
-      mag: magParCle.has(ra + "_" + dec) ? magParCle.get(ra + "_" + dec) : 3,
-    }));
+    noms = liste.map(([ra, dec, nom]) => {
+      const v = vecteurEquatorial(ra, dec);
+      return { vx: v[0], vy: v[1], vz: v[2], nom, mag: magParCle.has(ra + "_" + dec) ? magParCle.get(ra + "_" + dec) : 3 };
+    });
   }
 
   function ajouterMessage(texte) {
@@ -121,12 +125,11 @@
   /* Tracés des constellations : points uniques partagés entre les lignes, centre calculé pour le nom. */
   function preparerConstellations(donnees) {
     const cle = new Map();
-    const ras = [];
-    const decs = [];
+    const pts = [];
     const indice = (ra, dec) => {
       const k = ra + "_" + dec;
       let i = cle.get(k);
-      if (i === undefined) { i = ras.length; cle.set(k, i); ras.push(ra * RAD); decs.push(dec * RAD); }
+      if (i === undefined) { i = pts.length; cle.set(k, i); pts.push(vecteurEquatorial(ra, dec)); }
       return i;
     };
     const polylignes = [];
@@ -138,22 +141,20 @@
       for (const ligne of c.lignes) {
         polylignes.push(ligne.map(([ra, dec]) => indice(ra, dec)));
         for (const [ra, dec] of ligne) {
-          x += Math.cos(dec * RAD) * Math.cos(ra * RAD);
-          y += Math.cos(dec * RAD) * Math.sin(ra * RAD);
-          z += Math.sin(dec * RAD);
+          const v = vecteurEquatorial(ra, dec);
+          x += v[0];
+          y += v[1];
+          z += v[2];
         }
       }
       const norme = Math.hypot(x, y, z);
-      if (norme > 1e-6) {
-        const dec = Math.asin(z / norme);
-        nomsC.push({ nom: c.nom.toUpperCase(), ra: Math.atan2(y, x), cosDec: Math.cos(dec), sinDec: Math.sin(dec) });
-      }
+      if (norme > 1e-6) nomsC.push({ nom: c.nom.toUpperCase(), vx: x / norme, vy: y / norme, vz: z / norme });
     }
-    const n = ras.length;
+    const n = pts.length;
     constellations.n = n;
-    constellations.ra = Float32Array.from(ras);
-    constellations.cosDec = Float32Array.from(decs, Math.cos);
-    constellations.sinDec = Float32Array.from(decs, Math.sin);
+    constellations.x = Float32Array.from(pts, (v) => v[0]);
+    constellations.y = Float32Array.from(pts, (v) => v[1]);
+    constellations.z = Float32Array.from(pts, (v) => v[2]);
     constellations.sx = new Float32Array(n);
     constellations.sy = new Float32Array(n);
     constellations.vis = new Uint8Array(n);
@@ -279,21 +280,25 @@
     return p;
   }
 
-  function dessinerConstellations(lst, sinLat, cosLat, base, echelle, cx, cy) {
+  /* Projette un vecteur équatorial J2000 avec la matrice complète ; renvoie [sx, sy] ou null. */
+  function projeterJ2000(M, x, y, z, echelle, cx, cy) {
+    const zc = M[6] * x + M[7] * y + M[8] * z;
+    if (zc < -0.9) return null;
+    const k = (2 / (1 + zc)) * echelle;
+    return [cx + (M[0] * x + M[1] * y + M[2] * z) * k, cy - (M[3] * x + M[4] * y + M[5] * z) * k];
+  }
+
+  function dessinerConstellations(M, echelle, cx, cy) {
     const c = constellations;
-    const { r, u, f } = base;
     for (let i = 0; i < c.n; i++) {
-      const H = lst - c.ra[i];
-      const cd = c.cosDec[i];
-      const sd = c.sinDec[i];
-      const e = -cd * Math.sin(H);
-      const n = sd * cosLat - cd * sinLat * Math.cos(H);
-      const h = sd * sinLat + cd * cosLat * Math.cos(H);
-      const z = e * f[0] + n * f[1] + h * f[2];
-      if (z < -0.9) { c.vis[i] = 0; continue; }
-      const k = (2 / (1 + z)) * echelle;
-      c.sx[i] = cx + (e * r[0] + n * r[1] + h * r[2]) * k;
-      c.sy[i] = cy - (e * u[0] + n * u[1] + h * u[2]) * k;
+      const x = c.x[i];
+      const y = c.y[i];
+      const z = c.z[i];
+      const zc = M[6] * x + M[7] * y + M[8] * z;
+      if (zc < -0.9) { c.vis[i] = 0; continue; }
+      const k = (2 / (1 + zc)) * echelle;
+      c.sx[i] = cx + (M[0] * x + M[1] * y + M[2] * z) * k;
+      c.sy[i] = cy - (M[3] * x + M[4] * y + M[5] * z) * k;
       c.vis[i] = 1;
     }
 
@@ -318,15 +323,102 @@
     ctx.fillStyle = "rgba(130, 215, 255, 0.95)";
     if ("letterSpacing" in ctx) ctx.letterSpacing = "1px";
     for (const nom of c.noms) {
-      const H = lst - nom.ra;
-      const cH = Math.cos(H);
-      const e = -nom.cosDec * Math.sin(H);
-      const n = nom.sinDec * cosLat - nom.cosDec * sinLat * cH;
-      const h = nom.sinDec * sinLat + nom.cosDec * cosLat * cH;
-      const p = versEcran([e, n, h], base, echelle, cx, cy);
+      const p = projeterJ2000(M, nom.vx, nom.vy, nom.vz, echelle, cx, cy);
       if (p && p[0] > 20 && p[0] < largeur - 20 && p[1] > 20 && p[1] < hauteur - 20) ctx.fillText(nom.nom, p[0], p[1]);
     }
     if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
+  /* ---------- Planètes et Lune (bibliothèque Astronomy Engine, js/astronomy.browser.min.js) ---------- */
+  const CORPS = [
+    { id: "Mercury", nom: "Mercure", couleur: "#cfc9c0" },
+    { id: "Venus", nom: "Vénus", couleur: "#fff5d6" },
+    { id: "Mars", nom: "Mars", couleur: "#ff8f66" },
+    { id: "Jupiter", nom: "Jupiter", couleur: "#f5e6c6" },
+    { id: "Saturn", nom: "Saturne", couleur: "#eedba5" },
+    { id: "Uranus", nom: "Uranus", couleur: "#a5eaf0" },
+    { id: "Neptune", nom: "Neptune", couleur: "#86a1ff" },
+  ];
+  const RAYON_LUNE_UA = 1.1614e-5; // rayon de la Lune en unités astronomiques
+  let astronomieOk = typeof Astronomy !== "undefined";
+  let cacheCorps = { cle: null, planetes: [], lune: null };
+
+  function calculerCorps(date) {
+    const cle = Math.floor(date.getTime() / 1000);
+    if (cacheCorps.cle === cle) return cacheCorps;
+    const observateur = new Astronomy.Observer(position.lat, position.lon, 0);
+    const planetes = CORPS.map((c) => {
+      const corps = Astronomy.Body[c.id];
+      const eq = Astronomy.Equator(corps, date, observateur, true, true);
+      return { ...c, ra: eq.ra * 15, dec: eq.dec, mag: Astronomy.Illumination(corps, date).mag };
+    });
+    const eqLune = Astronomy.Equator(Astronomy.Body.Moon, date, observateur, true, true);
+    const phase = Astronomy.Illumination(Astronomy.Body.Moon, date).phase_angle; // 0 = pleine, 180 = nouvelle
+    cacheCorps = { cle, planetes, lune: { ra: eqLune.ra * 15, dec: eqLune.dec, dist: eqLune.dist, phase } };
+    return cacheCorps;
+  }
+
+  /* Dessine la Lune avec sa phase ; theta = direction du Soleil à l'écran (radians). */
+  function dessinerLune(x, y, rayon, phaseDeg, theta) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(theta);
+    ctx.fillStyle = "#2b2f3b"; // partie dans l'ombre
+    ctx.beginPath();
+    ctx.arc(0, 0, rayon, 0, DEUX_PI);
+    ctx.fill();
+    const c = Math.cos(phaseDeg * RAD);
+    const rx = Math.abs(c) * rayon;
+    ctx.fillStyle = "#f4f0e2"; // partie éclairée : demi-disque côté Soleil, borné par le terminateur
+    ctx.beginPath();
+    ctx.arc(0, 0, rayon, -Math.PI / 2, Math.PI / 2, false);
+    if (c >= 0) ctx.ellipse(0, 0, rx, rayon, 0, Math.PI / 2, Math.PI * 1.5, false);
+    else ctx.ellipse(0, 0, rx, rayon, 0, Math.PI / 2, -Math.PI / 2, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function dessinerCorps(corps, lstDeg, vSoleil, base, echelle, cx, cy, boost, limite) {
+    ctx.font = "12px Poppins, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    const surEcran = (p) => p && p[0] > -30 && p[0] < largeur + 30 && p[1] > -30 && p[1] < hauteur + 30;
+
+    for (const pl of corps.planetes) {
+      if (pl.mag > limite) continue;
+      const p = versEcran(Astro.versHorizon(pl.ra, pl.dec, position.lat, lstDeg), base, echelle, cx, cy);
+      if (!surEcran(p)) continue;
+      const rayon = borner(3.6 - 0.5 * pl.mag, 2, 6.5) * boost;
+      ctx.fillStyle = pl.couleur;
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], rayon, 0, DEUX_PI);
+      ctx.fill();
+      if (reglages.noms) {
+        ctx.fillStyle = "rgba(255, 236, 190, 0.95)";
+        ctx.fillText(pl.nom, p[0] + rayon + 5, p[1] - 5);
+      }
+    }
+
+    const l = corps.lune;
+    const vLune = Astro.versHorizon(l.ra, l.dec, position.lat, lstDeg);
+    const p = versEcran(vLune, base, echelle, cx, cy);
+    if (!surEcran(p)) return;
+    const zc = vLune[0] * base.f[0] + vLune[1] * base.f[1] + vLune[2] * base.f[2];
+    const rayon = Math.max(9, (RAYON_LUNE_UA / l.dist) * echelle * (2 / (1 + zc)));
+
+    // Direction du Soleil à l'écran : on projette un point voisin de la Lune, sur le grand cercle Lune -> Soleil.
+    const ps = vSoleil[0] * vLune[0] + vSoleil[1] * vLune[1] + vSoleil[2] * vLune[2];
+    const t = [vSoleil[0] - ps * vLune[0], vSoleil[1] - ps * vLune[1], vSoleil[2] - ps * vLune[2]];
+    const nt = Math.hypot(t[0], t[1], t[2]) || 1;
+    const voisin = [vLune[0] + (0.01 * t[0]) / nt, vLune[1] + (0.01 * t[1]) / nt, vLune[2] + (0.01 * t[2]) / nt];
+    const pv = versEcran(voisin, base, echelle, cx, cy);
+    const theta = pv ? Math.atan2(pv[1] - p[1], pv[0] - p[0]) : 0;
+
+    dessinerLune(p[0], p[1], rayon, l.phase, theta);
+    if (reglages.noms) {
+      ctx.fillStyle = "rgba(255, 236, 190, 0.95)";
+      ctx.fillText("Lune", p[0] + rayon + 5, p[1] - 5);
+    }
   }
 
   function dessiner() {
@@ -335,7 +427,6 @@
 
     const maintenant = new Date(Date.now() + decalageMs);
     const lstDeg = Astro.tempsSideralLocal(maintenant, position.lon);
-    const lst = lstDeg * RAD;
     const soleil = Astro.positionSoleil(maintenant);
     const vSoleil = Astro.versHorizon(soleil.ra, soleil.dec, position.lat, lstDeg);
     const hauteurSoleil = Astro.azimutHauteur(vSoleil).alt;
@@ -345,6 +436,9 @@
     const cx = largeur / 2;
     const cy = hauteur / 2;
     const boost = Math.pow(80 / vue.fov, 0.3);
+
+    /* Matrice des objets au catalogue J2000 (précession incluse), de l'équatorial vers l'écran. */
+    const MJ = Astro.mulMat(Astro.mulMat(Astro.matriceCamera(base), Astro.matriceHorizon(position.lat, lstDeg)), Astro.matricePrecession(maintenant));
 
     /* Fond : dégradé de l'atmosphère ancré sur l'horizon, ou espace noir. */
     if (reglages.atmosphere) {
@@ -364,27 +458,18 @@
 
     /* Étoiles */
     const limite = reglages.atmosphere ? Astro.magnitudeLimite(hauteurSoleil, reglages.magLimite) : reglages.magLimite;
-    const sinLat = Math.sin(position.lat * RAD);
-    const cosLat = Math.cos(position.lat * RAD);
-    const { r, u, f } = base;
     let couleur = "";
-
     for (let i = 0; i < etoiles.n; i++) {
       const mag = etoiles.mag[i];
       if (mag > limite) continue;
-      const H = lst - etoiles.ra[i];
-      const cH = Math.cos(H);
-      const cd = etoiles.cosDec[i];
-      const sd = etoiles.sinDec[i];
-      const e = -cd * Math.sin(H);
-      const n = sd * cosLat - cd * sinLat * cH;
-      const h = sd * sinLat + cd * cosLat * cH;
-
-      const z = e * f[0] + n * f[1] + h * f[2];
-      if (z < -0.9) continue;
-      const k = (2 / (1 + z)) * echelle;
-      const sx = cx + (e * r[0] + n * r[1] + h * r[2]) * k;
-      const sy = cy - (e * u[0] + n * u[1] + h * u[2]) * k;
+      const x = etoiles.x[i];
+      const y = etoiles.y[i];
+      const z = etoiles.z[i];
+      const zc = MJ[6] * x + MJ[7] * y + MJ[8] * z;
+      if (zc < -0.9) continue;
+      const k = (2 / (1 + zc)) * echelle;
+      const sx = cx + (MJ[0] * x + MJ[1] * y + MJ[2] * z) * k;
+      const sy = cy - (MJ[3] * x + MJ[4] * y + MJ[5] * z) * k;
       if (sx < -6 || sx > largeur + 6 || sy < -6 || sy > hauteur + 6) continue;
 
       const rayon = Math.max(0.45, Math.min(4.2, 3.4 - 0.46 * mag)) * boost;
@@ -400,12 +485,18 @@
     ctx.globalAlpha = 1;
 
     /* Constellations : lignes et noms */
-    if (reglages.constellations && constellations.n > 0) {
-      dessinerConstellations(lst, sinLat, cosLat, base, echelle, cx, cy);
-    }
+    if (reglages.constellations && constellations.n > 0) dessinerConstellations(MJ, echelle, cx, cy);
 
-    /* Soleil */
+    /* Soleil, planètes, Lune */
     const pSoleil = dessinerSoleil(vSoleil, base, echelle, cx, cy, boost);
+    if (astronomieOk) {
+      try {
+        dessinerCorps(calculerCorps(maintenant), lstDeg, vSoleil, base, echelle, cx, cy, boost, limite);
+      } catch (erreur) {
+        astronomieOk = false;
+        ajouterMessage("Planètes et Lune indisponibles : " + erreur.message);
+      }
+    }
 
     /* Noms des étoiles et du Soleil */
     if (reglages.noms) {
@@ -415,12 +506,7 @@
       const seuil = borner(2.2 + 2.5 * Math.log2(80 / vue.fov), 1.6, 6.5);
       for (const s of noms) {
         if (s.mag > seuil || s.mag > limite) continue;
-        const H = lst - s.ra;
-        const cH = Math.cos(H);
-        const e = -s.cosDec * Math.sin(H);
-        const n = s.sinDec * cosLat - s.cosDec * sinLat * cH;
-        const h = s.sinDec * sinLat + s.cosDec * cosLat * cH;
-        const p = versEcran([e, n, h], base, echelle, cx, cy);
+        const p = projeterJ2000(MJ, s.vx, s.vy, s.vz, echelle, cx, cy);
         if (!p || p[0] < 0 || p[0] > largeur || p[1] < 0 || p[1] > hauteur) continue;
         ctx.fillText(s.nom, p[0] + 7, p[1] - 6);
       }
@@ -627,6 +713,7 @@
   appliquerReglages();
   majHorloge();
   setInterval(majHorloge, 1000);
+  if (!astronomieOk) ajouterMessage("Planètes et Lune absentes : ouvre outils/telecharger-astronomy.html pour ajouter la bibliothèque.");
   chargerEtoiles();
   chargerConstellations();
   (function boucle() {

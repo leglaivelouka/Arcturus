@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcturus : ajouter la bibliothèque des planètes</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; background: #120b24; color: #fff; }
+    button { font: inherit; padding: 0.6rem 1.1rem; border: 0; border-radius: 12px; background: #7b63e8; color: #fff; cursor: pointer; }
+    a { color: #9fc2ff; }
+    #resultat { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Ajouter la bibliothèque des planètes et de la Lune</h1>
+  <p>Cet outil récupère <strong>Astronomy Engine</strong> (licence MIT) et crée <strong>astronomy.browser.min.js</strong>, à placer dans le dossier <strong>js</strong> du projet.</p>
+  <p><button id="recuperer" type="button">Récupérer la bibliothèque</button></p>
+  <p>Source : <a href="https://cdn.jsdelivr.net/npm/astronomy-engine/astronomy.browser.min.js" target="_blank" rel="noopener">cdn.jsdelivr.net/npm/astronomy-engine</a></p>
+  <div id="resultat" role="status"></div>
+
+  <script>
+    const zone = document.getElementById("resultat");
+    document.getElementById("recuperer").addEventListener("click", async () => {
+      zone.textContent = "Téléchargement…";
+      try {
+        const rep = await fetch("https://cdn.jsdelivr.net/npm/astronomy-engine/astronomy.browser.min.js");
+        if (!rep.ok) throw new Error("HTTP " + rep.status);
+        const texte = await rep.text();
+        if (texte.length < 50000 || !texte.includes("Astronomy")) throw new Error("fichier inattendu");
+        const lien = document.createElement("a");
+        lien.href = URL.createObjectURL(new Blob([texte], { type: "text/javascript" }));
+        lien.download = "astronomy.browser.min.js";
+        const bouton = document.createElement("button");
+        bouton.type = "button";
+        bouton.textContent = "Télécharger astronomy.browser.min.js";
+        bouton.addEventListener("click", () => lien.click());
+        const p = document.createElement("p");
+        p.textContent = `Bibliothèque prête (${Math.round(texte.length / 1024)} Ko). Place le fichier dans le dossier js de ton projet.`;
+        zone.replaceChildren(p, bouton);
+      } catch (erreur) {
+        zone.textContent = "Récupération impossible (" + erreur.message + "). Ouvre le lien ci-dessus et enregistre le fichier sous le nom astronomy.browser.min.js.";
+      }
+    });
+  </script>
+</body>
+</html>
