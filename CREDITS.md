@@ -6,3 +6,4 @@
   (tracés et positions des noms d'après l'UAI, avec modifications d'Olaf Frohn). Le fichier `data/constellations.json` en est dérivé.
 - **Météo** : Open-Meteo.com, https://open-meteo.com
 - **Planètes et Lune** : Astronomy Engine, © Don Cross, licence MIT, https://github.com/cosinekitty/astronomy
+- **Galaxies, nébuleuses et amas** : OpenNGC, © Mattia Verga, licence CC BY-SA 4.0, https://github.com/mattiaverga/OpenNGC (le fichier `data/ciel-profond.json` en est dérivé et reste sous la même licence).

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcturus : préparer galaxies, nébuleuses et amas</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; background: #120b24; color: #fff; }
+    button, input { font: inherit; }
+    button { padding: 0.6rem 1.1rem; border: 0; border-radius: 12px; background: #7b63e8; color: #fff; cursor: pointer; }
+    a { color: #9fc2ff; }
+    #resultat { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Préparer galaxies, nébuleuses et amas</h1>
+  <p>Cet outil crée <strong>ciel-profond.json</strong>, à placer dans le dossier <strong>data</strong> du projet, à partir du catalogue OpenNGC.</p>
+
+  <p><button id="recuperer" type="button">Récupérer le catalogue en ligne</button></p>
+
+  <p>Si la récupération échoue, télécharge les fichiers <strong>NGC.csv</strong> et <strong>addendum.csv</strong> dans le dossier
+    <em>database_files</em> du dépôt
+    <a href="https://github.com/mattiaverga/OpenNGC" target="_blank" rel="noopener">github.com/mattiaverga/OpenNGC</a>
+    (ouvre chaque fichier, puis le bouton de téléchargement), et choisis-les ensemble ici :</p>
+  <p><input id="fichiers" type="file" multiple accept=".csv,text/csv,text/plain"></p>
+
+  <div id="resultat" role="status"></div>
+
+  <script src="convertir-profond.js"></script>
+  <script>
+    const BASE = "https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/";
+    const zone = document.getElementById("resultat");
+
+    function traiter(textes) {
+      try {
+        const r = ConvertirProfond.convertir(textes);
+        const lien = document.createElement("a");
+        lien.href = URL.createObjectURL(new Blob([r.json], { type: "application/json" }));
+        lien.download = "ciel-profond.json";
+        const bouton = document.createElement("button");
+        bouton.type = "button";
+        bouton.textContent = "Télécharger ciel-profond.json";
+        bouton.addEventListener("click", () => lien.click());
+        const p = document.createElement("p");
+        p.textContent = `${r.nb} objets retenus, environ ${Math.round(r.taille / 1024)} Ko. Place le fichier dans le dossier data de ton projet.`;
+        zone.replaceChildren(p, bouton);
+      } catch (erreur) {
+        zone.textContent = erreur.message;
+      }
+    }
+
+    document.getElementById("recuperer").addEventListener("click", async () => {
+      zone.textContent = "Téléchargement du catalogue (quelques Mo)…";
+      try {
+        const textes = [];
+        for (const nom of ["NGC.csv", "addendum.csv"]) {
+          const rep = await fetch(BASE + nom);
+          if (!rep.ok) throw new Error(nom + " : HTTP " + rep.status);
+          textes.push(await rep.text());
+        }
+        traiter(textes);
+      } catch (erreur) {
+        zone.textContent = "Récupération impossible (" + erreur.message + "). Utilise la méthode manuelle ci-dessus.";
+      }
+    });
+
+    document.getElementById("fichiers").addEventListener("change", async (e) => {
+      const fichiers = [...e.target.files];
+      if (!fichiers.length) return;
+      try {
+        traiter(await Promise.all(fichiers.map((f) => f.text())));
+      } catch {
+        zone.textContent = "Impossible de lire ces fichiers.";
+      }
+    });
+  </script>
+</body>
+</html>

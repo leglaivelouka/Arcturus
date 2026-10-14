@@ -9,7 +9,7 @@
   const FOV_MIN = 5;
   const FOV_MAX = 130;
   const REGLAGES_DEFAUT = {
-    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, magLimite: 6.5,
+    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, profond: true, magLimite: 6.5,
   };
 
   /* Étoiles de démonstration, utilisées seulement si data/etoiles.json est absent : [RA en heures, Dec, mag, B-V]. */
@@ -38,7 +38,8 @@
   const reglages = lireReglages();
 
   const etoiles = { n: 0, x: null, y: null, z: null, mag: null, couleur: [] };
-  let noms = []; // { ra, cosDec, sinDec, nom, mag }
+  let noms = []; // { vx, vy, vz, nom, mag }
+  const profond = { n: 0, x: null, y: null, z: null, mag: null, maj: null, min: null, pa: null, famille: [], nom: [], commun: [] };
   const constellations = { n: 0, x: null, y: null, z: null, sx: null, sy: null, vis: null, polylignes: [], noms: [] };
 
   /* ---------- Position (la même que sur l'accueil) et réglages mémorisés ---------- */
@@ -169,6 +170,46 @@
       preparerConstellations(await rep.json());
     } catch {
       ajouterMessage("Tracés des constellations absents : ouvre outils/convertir-constellations.html pour les créer.");
+    }
+    aRedessiner = true;
+  }
+
+  /* Galaxies, nébuleuses, amas (OpenNGC) : [RA, Dec, mag, famille, grand axe ('), petit axe ('), angle, nom, nom commun]. */
+  function preparerProfond(objets) {
+    const n = objets.length;
+    profond.n = n;
+    profond.x = new Float32Array(n);
+    profond.y = new Float32Array(n);
+    profond.z = new Float32Array(n);
+    profond.mag = new Float32Array(n);
+    profond.maj = new Float32Array(n);
+    profond.min = new Float32Array(n);
+    profond.pa = new Float32Array(n);
+    profond.famille = new Array(n);
+    profond.nom = new Array(n);
+    profond.commun = new Array(n);
+    objets.forEach(([ra, dec, mag, famille, maj, min, pa, nom, commun], i) => {
+      const v = vecteurEquatorial(ra, dec);
+      profond.x[i] = v[0];
+      profond.y[i] = v[1];
+      profond.z[i] = v[2];
+      profond.mag[i] = mag === null || mag === undefined ? 10.5 : mag;
+      profond.maj[i] = maj || 1;
+      profond.min[i] = min || maj || 1;
+      profond.pa[i] = pa || 0;
+      profond.famille[i] = famille;
+      profond.nom[i] = nom;
+      profond.commun[i] = commun || "";
+    });
+  }
+
+  async function chargerProfond() {
+    try {
+      const rep = await fetch("data/ciel-profond.json");
+      if (!rep.ok) throw new Error("HTTP " + rep.status);
+      preparerProfond((await rep.json()).objets);
+    } catch {
+      ajouterMessage("Galaxies et nébuleuses absentes : ouvre outils/convertir-profond.html pour les créer.");
     }
     aRedessiner = true;
   }
@@ -329,6 +370,99 @@
     if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
   }
 
+  /* Symboles du ciel profond : galaxie = ellipse, amas ouvert = cercle pointillé, amas globulaire = cercle croisé,
+     nébuleuse planétaire = cercle à repères, nébuleuse = carré, rémanent de supernova = losange. */
+  const COULEURS_PROFOND = { G: "#ffb070", OC: "#ffe08a", GC: "#ffe08a", PN: "#7fffd4", N: "#7fd0ff", SNR: "#d0a8ff" };
+
+  function angleGalaxie(M, i, echelle, cx, cy, px, py) {
+    // Direction du grand axe à l'écran : on projette un point voisin, dans la direction de l'angle de position (nord vers l'est).
+    const x = profond.x[i];
+    const y = profond.y[i];
+    const z = profond.z[i];
+    const alpha = Math.atan2(y, x);
+    const delta = Math.asin(z);
+    const th = profond.pa[i] * RAD;
+    const nx = -Math.sin(delta) * Math.cos(alpha);
+    const ny = -Math.sin(delta) * Math.sin(alpha);
+    const nz = Math.cos(delta);
+    const ex = -Math.sin(alpha);
+    const ey = Math.cos(alpha);
+    const eps = 0.003;
+    const tx = Math.cos(th) * nx + Math.sin(th) * ex;
+    const ty = Math.cos(th) * ny + Math.sin(th) * ey;
+    const tz = Math.cos(th) * nz;
+    const q = projeterJ2000(M, x + eps * tx, y + eps * ty, z + eps * tz, echelle, cx, cy);
+    return q ? Math.atan2(q[1] - py, q[0] - px) : 0;
+  }
+
+  function dessinerProfond(M, echelle, cx, cy, limite) {
+    const magMax = Math.min(12, limite + 4.5); // devient invisible en plein jour ou en crépuscule clair
+    if (profond.n === 0 || magMax < 4) return;
+    const seuilNom = borner(7 + 2.2 * Math.log2(80 / vue.fov), 5.5, 12);
+    ctx.lineWidth = 1.2;
+    ctx.font = "12px Poppins, system-ui, sans-serif";
+    ctx.textAlign = "left";
+
+    for (let i = 0; i < profond.n; i++) {
+      const mag = profond.mag[i];
+      if (mag > magMax) continue;
+      const x = profond.x[i];
+      const y = profond.y[i];
+      const z = profond.z[i];
+      const zc = M[6] * x + M[7] * y + M[8] * z;
+      if (zc < -0.9) continue;
+      const k = (2 / (1 + zc)) * echelle;
+      const sx = cx + (M[0] * x + M[1] * y + M[2] * z) * k;
+      const sy = cy - (M[3] * x + M[4] * y + M[5] * z) * k;
+      if (sx < -60 || sx > largeur + 60 || sy < -60 || sy > hauteur + 60) continue;
+
+      const famille = profond.famille[i];
+      const a = Math.min(1500, Math.max(5, ((profond.maj[i] / 120) * RAD) * k)); // demi grand axe en pixels, 5 px minimum
+      const couleur = COULEURS_PROFOND[famille] || "#ffffff";
+      ctx.strokeStyle = couleur;
+      ctx.globalAlpha = borner(1.2 - 0.07 * (mag - 4), 0.45, 1);
+
+      ctx.beginPath();
+      if (famille === "G") {
+        const b = Math.max(3.5, a * (profond.min[i] / profond.maj[i]));
+        const angle = a > 6 ? angleGalaxie(M, i, echelle, cx, cy, sx, sy) : 0;
+        ctx.ellipse(sx, sy, a, b, angle, 0, DEUX_PI);
+      } else if (famille === "OC") {
+        ctx.setLineDash([3, 3]);
+        ctx.arc(sx, sy, a, 0, DEUX_PI);
+      } else if (famille === "GC") {
+        ctx.arc(sx, sy, a, 0, DEUX_PI);
+        ctx.moveTo(sx - a, sy);
+        ctx.lineTo(sx + a, sy);
+        ctx.moveTo(sx, sy - a);
+        ctx.lineTo(sx, sy + a);
+      } else if (famille === "PN") {
+        ctx.arc(sx, sy, a * 0.6, 0, DEUX_PI);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          ctx.moveTo(sx + dx * a * 0.6, sy + dy * a * 0.6);
+          ctx.lineTo(sx + dx * a * 1.2, sy + dy * a * 1.2);
+        }
+      } else if (famille === "SNR") {
+        ctx.moveTo(sx, sy - a);
+        ctx.lineTo(sx + a, sy);
+        ctx.lineTo(sx, sy + a);
+        ctx.lineTo(sx - a, sy);
+        ctx.closePath();
+      } else {
+        ctx.rect(sx - a, sy - a, 2 * a, 2 * a);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (reglages.noms && mag <= seuilNom) {
+        ctx.fillStyle = couleur;
+        const texte = vue.fov < 35 && profond.commun[i] ? `${profond.nom[i]} (${profond.commun[i]})` : profond.nom[i];
+        ctx.fillText(texte, sx + Math.min(a, 40) + 4, sy - 3);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
   /* ---------- Planètes et Lune (bibliothèque Astronomy Engine, js/astronomy.browser.min.js) ---------- */
   const CORPS = [
     { id: "Mercury", nom: "Mercure", couleur: "#cfc9c0" },
@@ -458,6 +592,7 @@
 
     /* Étoiles */
     const limite = reglages.atmosphere ? Astro.magnitudeLimite(hauteurSoleil, reglages.magLimite) : reglages.magLimite;
+    if (reglages.profond) dessinerProfond(MJ, echelle, cx, cy, limite);
     let couleur = "";
     for (let i = 0; i < etoiles.n; i++) {
       const mag = etoiles.mag[i];
@@ -684,6 +819,7 @@
     for (const b of interrupteurs) b.setAttribute("aria-pressed", String(Boolean(reglages[b.dataset.reglage])));
     $("voile").hidden = !reglages.nuit;
     document.body.classList.toggle("nuit", reglages.nuit);
+    $("profond-actif").checked = reglages.profond;
     $("mag-limite").value = String(reglages.magLimite);
     $("mag-valeur").textContent = reglages.magLimite.toFixed(1).replace(".", ",");
     aRedessiner = true;
@@ -701,6 +837,11 @@
   const dialogueCarte = $("dialogue-carte");
   $("btn-reglages").addEventListener("click", () => dialogueCarte.showModal());
   $("btn-fermer-carte").addEventListener("click", () => dialogueCarte.close());
+  $("profond-actif").addEventListener("change", (e) => {
+    reglages.profond = e.target.checked;
+    sauverReglages();
+    appliquerReglages();
+  });
   $("mag-limite").addEventListener("input", (e) => {
     reglages.magLimite = borner(parseFloat(e.target.value), 3, 6.5);
     sauverReglages();
@@ -716,6 +857,7 @@
   if (!astronomieOk) ajouterMessage("Planètes et Lune absentes : ouvre outils/telecharger-astronomy.html pour ajouter la bibliothèque.");
   chargerEtoiles();
   chargerConstellations();
+  chargerProfond();
   (function boucle() {
     if (aRedessiner) dessiner();
     requestAnimationFrame(boucle);
