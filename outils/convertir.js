@@ -30,6 +30,11 @@
     const iMag = entete.indexOf("mag");
     const iCi = entete.indexOf("ci");
     const iNom = entete.indexOf("proper");
+    const iBf = entete.indexOf("bf");
+    const iCon = entete.indexOf("con");
+    const iSpect = entete.indexOf("spect");
+    const iDist = entete.indexOf("dist");
+    const iHip = entete.indexOf("hip");
     if (iRa < 0 || iDec < 0 || iMag < 0) {
       throw new Error("Colonnes ra, dec ou mag introuvables : ce fichier n'est pas un catalogue HYG.");
     }
@@ -47,7 +52,14 @@
       if (mag > magMax || mag < -10 || nom === "Sol") continue;
       const ci = iCi >= 0 ? parseFloat(c[iCi]) : NaN;
       if (ra > raMax) raMax = ra;
-      gardees.push({ ra, dec, mag, ci: Number.isFinite(ci) ? ci : 0.6, nom });
+      const texte = (i) => (i >= 0 ? (c[i] || "").trim().replace(/\s+/g, " ") : "");
+      const dist = iDist >= 0 ? parseFloat(c[iDist]) : NaN;
+      gardees.push({
+        ra, dec, mag, ci: Number.isFinite(ci) ? ci : 0.6, nom,
+        bf: texte(iBf), con: texte(iCon), spect: texte(iSpect), hip: texte(iHip),
+        // distance en années-lumière ; HYG note les distances inconnues par de très grandes valeurs
+        al: Number.isFinite(dist) && dist > 0 && dist < 50000 ? dist * 3.26156 : null,
+      });
     }
 
     // Dans HYG, l'ascension droite est en heures ; on la convertit en degrés.
@@ -56,13 +68,19 @@
     const etoiles = gardees.map((s) => [arrondi(s.ra * facteur, 3), arrondi(s.dec, 3), arrondi(s.mag, 2), arrondi(s.ci, 2)]);
     const noms = gardees.filter((s) => s.nom).map((s) => [arrondi(s.ra * facteur, 3), arrondi(s.dec, 3), s.nom]);
 
+    // Fiche détaillée pour les étoiles assez brillantes : désignation, constellation, type spectral, distance, numéro Hipparcos.
+    const details = gardees
+      .filter((s) => s.mag <= 5.0 && (s.bf || s.con || s.spect || s.al || s.hip))
+      .map((s) => [arrondi(s.ra * facteur, 3), arrondi(s.dec, 3), s.bf, s.con, s.spect, s.al === null ? null : arrondi(s.al, 1), s.hip ? Number(s.hip) || null : null]);
+
     const json = JSON.stringify({
       source: "HYG Database (Hipparcos, Yale, Gliese), licence CC BY-SA 4.0, astronexus.com/hyg",
       magMax,
       etoiles,
       noms,
+      details,
     });
-    return { json, nbEtoiles: etoiles.length, nbNoms: noms.length, taille: json.length };
+    return { json, nbEtoiles: etoiles.length, nbNoms: noms.length, nbDetails: details.length, taille: json.length };
   }
 
   racine.ConvertirEtoiles = { convertir };

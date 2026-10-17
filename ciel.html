@@ -65,6 +65,19 @@
     </div>
   </div>
 
+  <aside id="fiche" class="fiche" role="dialog" aria-labelledby="fiche-titre" hidden>
+    <div class="fiche-tete">
+      <div>
+        <h2 id="fiche-titre"></h2>
+        <p id="fiche-sous" class="fiche-sous"></p>
+      </div>
+      <button type="button" id="fiche-fermer" class="fiche-x" aria-label="Fermer la fiche">✕</button>
+    </div>
+    <dl id="fiche-lignes" class="fiche-lignes"></dl>
+    <p id="fiche-note" class="fiche-note" hidden></p>
+    <button type="button" id="fiche-centrer" class="bouton">Centrer sur l'objet</button>
+  </aside>
+
   <dialog id="dialogue-carte" aria-labelledby="titre-carte">
     <h2 id="titre-carte">Réglages de la carte</h2>
     <label class="champ" for="mag-limite">Étoiles visibles jusqu'à la magnitude <output id="mag-valeur">6,5</output></label>

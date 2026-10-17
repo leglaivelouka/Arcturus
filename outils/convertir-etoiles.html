@@ -38,7 +38,7 @@
           bouton.textContent = "Télécharger etoiles.json";
           bouton.addEventListener("click", () => lien.click());
           const p = document.createElement("p");
-          p.textContent = `${r.nbEtoiles} étoiles gardées (dont ${r.nbNoms} avec un nom), environ ${Math.round(r.taille / 1024)} Ko. Place le fichier dans le dossier data de ton projet.`;
+          p.textContent = `${r.nbEtoiles} étoiles gardées (dont ${r.nbNoms} avec un nom et ${r.nbDetails} avec une fiche détaillée), environ ${Math.round(r.taille / 1024)} Ko. Place le fichier dans le dossier data de ton projet.`;
           zone.replaceChildren(p, bouton);
         } catch (erreur) {
           zone.textContent = erreur.message;
