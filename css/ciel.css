@@ -14,8 +14,17 @@ body { background: #040815; }
 
 #ciel:active { cursor: grabbing; }
 
+/* Paysage photographique : par-dessus le ciel, transparent, sans gêner les gestes. */
+#paysage {
+  position: fixed;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
 /* Mode nuit : tout passe en nuances de rouge pour préserver la vision nocturne. */
-body.nuit #ciel { filter: grayscale(1); }
+body.nuit #ciel,
+body.nuit #paysage { filter: grayscale(1); }
 
 .voile {
   position: fixed;

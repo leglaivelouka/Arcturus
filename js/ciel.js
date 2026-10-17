@@ -25,6 +25,7 @@
 
   const $ = (id) => document.getElementById(id);
   const canvas = $("ciel");
+  const canvasPano = $("paysage");
   const ctx = canvas.getContext("2d");
   const borner = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -223,6 +224,10 @@
     canvas.height = Math.round(hauteur * ratio);
     canvas.style.width = largeur + "px";
     canvas.style.height = hauteur + "px";
+    canvasPano.width = canvas.width;
+    canvasPano.height = canvas.height;
+    canvasPano.style.width = largeur + "px";
+    canvasPano.style.height = hauteur + "px";
     aRedessiner = true;
   }
 
@@ -248,6 +253,7 @@
     return lignes;
   })();
 
+  const PAYSAGE = Paysage.construire();
   const POINTS_CARDINAUX = [["N", 0], ["E", 90], ["S", 180], ["O", 270]];
 
   /* ---------- Dessin ---------- */
@@ -297,10 +303,80 @@
     ctx.fill("evenodd");
   }
 
-  function couleurSol(hauteurSoleil) {
+  /* Couleurs du paysage : sombres la nuit, un peu plus claires et vertes en plein jour. */
+  function couleursPaysage(hauteurSoleil) {
     const t = reglages.atmosphere ? borner((hauteurSoleil + 8) / 14, 0, 1) : 0;
-    const m = (nuit, jour) => Math.round(nuit + (jour - nuit) * t);
-    return `rgb(${m(6, 38)},${m(9, 52)},${m(12, 34)})`;
+    const m = (nuit, jour) => `rgb(${nuit.map((v, i) => Math.round(v + (jour[i] - v) * t)).join(",")})`;
+    return {
+      sol: m([6, 9, 12], [38, 52, 34]),
+      collines: m([9, 14, 20], [46, 66, 58]),
+      arbres: m([3, 5, 7], [14, 22, 16]),
+    };
+  }
+
+  /* Une couche de silhouette : suite de petits quadrilatères entre l'horizon et la hauteur du profil. */
+  function dessinerCouche(profil, couleur, C, echelle, cx, cy, saut) {
+    const n = PAYSAGE.n;
+    const cosB = Math.cos(PAYSAGE.base * RAD);
+    const sinB = Math.sin(PAYSAGE.base * RAD);
+    ctx.fillStyle = couleur;
+    ctx.beginPath();
+    let pbx = 0;
+    let pby = 0;
+    let phx = 0;
+    let phy = 0;
+    let precedentOk = false;
+    for (let i = 0; ; i += saut) {
+      const ii = Math.min(i, n);
+      const sa = PAYSAGE.sinAz[ii];
+      const ca = PAYSAGE.cosAz[ii];
+      let ok = false;
+      let bx = 0;
+      let by = 0;
+      let hx = 0;
+      let hy = 0;
+      let e = cosB * sa;
+      let nn = cosB * ca;
+      let z = C[6] * e + C[7] * nn + C[8] * sinB;
+      if (z >= -0.9) {
+        let k = (2 / (1 + z)) * echelle;
+        bx = cx + (C[0] * e + C[1] * nn + C[2] * sinB) * k;
+        by = cy - (C[3] * e + C[4] * nn + C[5] * sinB) * k;
+        e = profil.cos[ii] * sa;
+        nn = profil.cos[ii] * ca;
+        const u = profil.sin[ii];
+        z = C[6] * e + C[7] * nn + C[8] * u;
+        if (z >= -0.9) {
+          k = (2 / (1 + z)) * echelle;
+          hx = cx + (C[0] * e + C[1] * nn + C[2] * u) * k;
+          hy = cy - (C[3] * e + C[4] * nn + C[5] * u) * k;
+          ok = true;
+        }
+      }
+      if (ok && precedentOk) {
+        ctx.moveTo(pbx, pby);
+        ctx.lineTo(bx, by);
+        ctx.lineTo(hx, hy);
+        ctx.lineTo(phx, phy);
+        ctx.closePath();
+      }
+      pbx = bx;
+      pby = by;
+      phx = hx;
+      phy = hy;
+      precedentOk = ok;
+      if (ii === n) break;
+    }
+    ctx.fill();
+  }
+
+  function dessinerPaysage(hauteurSoleil, base, echelle, cx, cy) {
+    const couleurs = couleursPaysage(hauteurSoleil);
+    dessinerSol(echelle, cx, cy, couleurs.sol);
+    const C = Astro.matriceCamera(base);
+    const saut = borner(Math.round(3 / (echelle * 0.1 * RAD)), 1, 12); // moins d'échantillons quand on ne zoome pas
+    dessinerCouche(PAYSAGE.collines, couleurs.collines, C, echelle, cx, cy, saut);
+    dessinerCouche(PAYSAGE.arbres, couleurs.arbres, C, echelle, cx, cy, saut);
   }
 
   function dessinerSoleil(v, base, echelle, cx, cy, boost) {
@@ -368,6 +444,114 @@
       if (p && p[0] > 20 && p[0] < largeur - 20 && p[1] > 20 && p[1] < hauteur - 20) ctx.fillText(nom.nom, p[0], p[1]);
     }
     if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
+  /* ---------- Paysage photographique : panorama équirectangulaire à ciel transparent (data/paysage.webp), rendu en WebGL ----------
+     Si le fichier ou WebGL manque, on garde le paysage généré. */
+  const PANORAMA = { pret: false, gl: null, programme: null, u: {}, visible: null };
+  const DECALAGE_AZIMUT_PANORAMA = -0.152; // fraction de tour : place le couchant du panorama à l'ouest
+
+  const SOURCE_VERTEX = "attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }";
+  const SOURCE_FRAGMENT = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;
+uniform float uEchelle;
+uniform vec3 uR;
+uniform vec3 uU;
+uniform vec3 uF;
+uniform vec3 uTeinte;
+uniform float uDecal;
+uniform sampler2D uTex;
+void main() {
+  // Pixel -> plan de la projection stéréographique -> direction dans le repère de la caméra.
+  vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uEchelle;
+  float r2 = dot(p, p);
+  float d = 4.0 + r2;
+  vec3 c = vec3(4.0 * p.x / d, 4.0 * p.y / d, (4.0 - r2) / d);
+  vec3 v = c.x * uR + c.y * uU + c.z * uF;               // [est, nord, haut]
+  float az = atan(v.x, v.y);                              // 0 = nord, positif vers l'est
+  float alt = asin(clamp(v.z, -1.0, 1.0));
+  vec2 uv = vec2(fract(az / 6.2831853 + uDecal), 0.5 - alt / 3.1415927);
+  vec4 t = texture2D(uTex, uv);                           // couleurs déjà multipliées par l'opacité
+  gl_FragColor = vec4(t.rgb * uTeinte, t.a);
+}`;
+
+  function compilerShader(gl, type, source) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, source);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) || "shader");
+    return sh;
+  }
+
+  function chargerPanorama() {
+    try {
+      const gl = canvasPano.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false });
+      if (!gl) return;
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compilerShader(gl, gl.VERTEX_SHADER, SOURCE_VERTEX));
+      gl.attachShader(prog, compilerShader(gl, gl.FRAGMENT_SHADER, SOURCE_FRAGMENT));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error("programme");
+      gl.useProgram(prog);
+
+      const tampon = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, tampon);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, "a");
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+      const u = {};
+      for (const nom of ["uRes", "uEchelle", "uR", "uU", "uF", "uTeinte", "uDecal", "uTex"]) u[nom] = gl.getUniformLocation(prog, nom);
+
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const texture = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.uniform1i(u.uTex, 0);
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+          PANORAMA.gl = gl;
+          PANORAMA.programme = prog;
+          PANORAMA.u = u;
+          PANORAMA.pret = true;
+          aRedessiner = true;
+        } catch { /* texture refusée : on garde le paysage généré */ }
+      };
+      image.src = "data/paysage.webp"; // absent : pas d'erreur visible, le paysage généré reste affiché
+    } catch { /* WebGL indisponible : on garde le paysage généré */ }
+  }
+
+  function dessinerPanorama(base, echelle, hauteurSoleil) {
+    const gl = PANORAMA.gl;
+    const u = PANORAMA.u;
+    gl.viewport(0, 0, canvasPano.width, canvasPano.height);
+    gl.useProgram(PANORAMA.programme);
+    gl.uniform2f(u.uRes, canvasPano.width, canvasPano.height);
+    gl.uniform1f(u.uEchelle, echelle * ratio);
+    gl.uniform3fv(u.uR, base.r);
+    gl.uniform3fv(u.uU, base.u);
+    gl.uniform3fv(u.uF, base.f);
+    gl.uniform1f(u.uDecal, DECALAGE_AZIMUT_PANORAMA);
+    // La photo est prise au coucher du soleil : on l'assombrit la nuit et on l'éclaire le jour.
+    const t = reglages.atmosphere ? borner((hauteurSoleil + 8) / 14, 0, 1) : 0;
+    const m = (nuit, jour) => nuit + (jour - nuit) * t;
+    gl.uniform3f(u.uTeinte, m(0.09, 1), m(0.105, 1), m(0.15, 1));
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   /* Symboles du ciel profond : galaxie = ellipse, amas ouvert = cercle pointillé, amas globulaire = cercle croisé,
@@ -649,7 +833,10 @@
     }
 
     /* Sol (paysage) et points cardinaux */
-    if (reglages.paysage) dessinerSol(echelle, cx, cy, couleurSol(hauteurSoleil));
+    const panoramaActif = reglages.paysage && PANORAMA.pret;
+    if (reglages.paysage && !PANORAMA.pret) dessinerPaysage(hauteurSoleil, base, echelle, cx, cy);
+    if (PANORAMA.visible !== panoramaActif) { PANORAMA.visible = panoramaActif; canvasPano.hidden = !panoramaActif; }
+    if (panoramaActif) dessinerPanorama(base, echelle, hauteurSoleil);
 
     if (reglages.lignes || reglages.paysage) {
       ctx.font = "700 15px Poppins, system-ui, sans-serif";
@@ -858,6 +1045,7 @@
   chargerEtoiles();
   chargerConstellations();
   chargerProfond();
+  chargerPanorama();
   (function boucle() {
     if (aRedessiner) dessiner();
     requestAnimationFrame(boucle);
