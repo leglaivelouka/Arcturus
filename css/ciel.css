@@ -240,5 +240,7 @@ dialog input[type="range"] { width: 100%; accent-color: #9db7ea; margin-bottom: 
 
 .fiche-note { margin-bottom: 0.8rem; font-size: 0.85rem; font-weight: 500; }
 
-.fiche .bouton { width: 100%; }
+.fiche-actions { display: flex; gap: 0.6rem; }
+.fiche .bouton { flex: 1; color: #fff; }
+.fiche .bouton:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
 .fiche-x:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }

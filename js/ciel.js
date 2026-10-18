@@ -1095,6 +1095,12 @@ void main() {
     Saturn: "Planète géante gazeuse, avec anneaux", Uranus: "Planète géante de glaces", Neptune: "Planète géante de glaces",
   };
   const CLASSES_SPECTRALES = { O: "bleue, très chaude", B: "bleu-blanc", A: "blanche", F: "blanc-jaune", G: "jaune", K: "orange", M: "rouge" };
+  // Noms dont l'article français porte un autre titre (la recherche Wikipédia gère déjà la plupart des variantes).
+  const WIKI_NOMS = { Polaris: "Étoile polaire", Vega: "Véga" };
+  const WIKI_PLANETES = {
+    Mercury: "Mercure (planète)", Venus: "Vénus (planète)", Mars: "Mars (planète)", Jupiter: "Jupiter (planète)",
+    Saturn: "Saturne (planète)", Uranus: "Uranus (planète)", Neptune: "Neptune (planète)",
+  };
   const POINTS_16 = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"];
   const UA_EN_KM = 149597870.7;
 
@@ -1194,6 +1200,11 @@ void main() {
     }).join(" ");
   }
 
+  /* Recherche sur Wikipédia en français : ouvre directement l'article quand le titre existe, sinon la liste des résultats. */
+  function urlWikipedia(requete) {
+    return "https://fr.wikipedia.org/w/index.php?title=Sp%C3%A9cial:Recherche&go=Go&search=" + encodeURIComponent(requete);
+  }
+
   function jourCle() { return heureSimulee().toDateString(); }
 
   function decrireEtoile(i) {
@@ -1213,6 +1224,7 @@ void main() {
     return {
       titre: proprio || bayer || "Étoile sans nom",
       sous: "Étoile",
+      wiki: proprio ? (WIKI_NOMS[proprio] || proprio) : det && det[6] ? "HIP " + det[6] : null,
       statique: lignes,
       position: (date) => vecteurHorizonJ2000(x, y, z, date),
       ephem: { positionAt: () => equatorialDeLaDate(x, y, z, heureSimulee()), seuil: -0.57 },
@@ -1231,6 +1243,7 @@ void main() {
     return {
       titre: profond.nom[i],
       sous: FAMILLES_FR[profond.famille[i]] || "Objet du ciel profond",
+      wiki: profond.nom[i].replace(/^M(\d+)$/, "Messier $1"),
       statique: lignes,
       position: (date) => vecteurHorizonJ2000(x, y, z, date),
       ephem: { positionAt: () => equatorialDeLaDate(x, y, z, heureSimulee()), seuil: -0.57 },
@@ -1250,6 +1263,7 @@ void main() {
     return {
       titre: p.nom,
       sous: TYPES_PLANETES[id] || "Planète",
+      wiki: WIKI_PLANETES[id] || p.nom,
       statique: lignes,
       position: (date) => {
         const eq = Astronomy.Equator(Astronomy.Body[id], date, observateur, true, true);
@@ -1293,6 +1307,7 @@ void main() {
     return {
       titre: "Lune",
       sous,
+      wiki: "Lune",
       statique: lignes,
       position: (d) => {
         const eq = Astronomy.Equator(Astronomy.Body.Moon, d, observateur, true, true);
@@ -1314,6 +1329,7 @@ void main() {
     return {
       titre: "Soleil",
       sous: "Notre étoile",
+      wiki: "Soleil",
       statique: [
         ["Magnitude", "−26,7"],
         ["Distance à la Terre", `${nf(distance, 3)} UA (lumière en ${Math.floor(distance * 8.3167)} min ${Math.round(((distance * 8.3167) % 1) * 60)} s)`],
@@ -1388,6 +1404,9 @@ void main() {
     selection = obj;
     $("fiche-titre").textContent = fiche.titre;
     $("fiche-sous").textContent = fiche.sous;
+    const lien = $("fiche-savoir");
+    lien.hidden = !fiche.wiki; // pas de lien pour une étoile faible sans nom ni numéro
+    if (fiche.wiki) lien.href = urlWikipedia(fiche.wiki);
     rendreFiche();
     $("fiche").hidden = false;
     $("horloge").hidden = true; // l'heure serait cachée sous la fiche

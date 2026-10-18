@@ -17,9 +17,9 @@ body {
   background-color: var(--nuit);
   /* Si assets/fond.jpg est absent, le dégradé sert de fond. */
   background-image:
-    url("../assets/fond.jpg (2).png"),
-    radial-gradient(ellipse at 30% 15%, #3a1d5c 0%, #150b2b 45%, var(--nuit) 100%);
-  background-size: cover;
+    url("../assets/mon_imagedefond.jpg"),
+    radial-gradient(ellipse at 30% 15%, #bc0000 0%, #2b0d0b 45%, var(--nuit) 100%);
+  
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -226,3 +226,24 @@ dialog h2 { font-size: 1.1rem; margin-bottom: 1rem; }
 .bientot { justify-content: center; text-align: center; }
 .bientot h1 { font-size: 1.5rem; }
 .bientot p { opacity: 0.85; }
+
+/* ---------- Thème rouge et noir (accueil uniquement : <body class="theme-rouge">) ---------- */
+body.theme-rouge {
+  --degrade: linear-gradient(135deg, rgba(222, 32, 38, 0.94) 0%, rgba(112, 11, 17, 0.94) 55%, rgba(26, 4, 7, 0.96) 100%);
+  background-color: #0a0203;
+  
+ 
+}
+
+body.theme-rouge .titre,
+body.theme-rouge .pastille {
+  background: linear-gradient(135deg, rgba(204, 24, 30, 0.95), rgba(48, 6, 9, 0.96));
+}
+
+body.theme-rouge .icone {
+  background: linear-gradient(135deg, #dc2a30, #3d080b);
+}
+
+body.theme-rouge dialog {
+  background: #1c0709;
+}
