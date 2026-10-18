@@ -9,7 +9,7 @@
   const FOV_MIN = 5;
   const FOV_MAX = 130;
   const REGLAGES_DEFAUT = {
-    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, profond: true, magLimite: 6.5,
+    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, galaxies: true, nebuleuses: true, amas: true, magLimite: 6.5,
   };
 
   /* Étoiles de démonstration, utilisées seulement si data/etoiles.json est absent : [RA en heures, Dec, mag, B-V]. */
@@ -70,6 +70,8 @@
         for (const cle of Object.keys(REGLAGES_DEFAUT)) {
           if (typeof mem[cle] === typeof REGLAGES_DEFAUT[cle]) r[cle] = mem[cle];
         }
+        // Ancien réglage unique « ciel profond » : s'il était coupé, les trois catégories le restent.
+        if (mem.profond === false && mem.galaxies === undefined) r.galaxies = r.nebuleuses = r.amas = false;
       }
     } catch { /* stockage indisponible */ }
     r.magLimite = borner(r.magLimite, 3, 6.5);
@@ -580,6 +582,8 @@ void main() {
 
   /* Symboles du ciel profond : galaxie = ellipse, amas ouvert = cercle pointillé, amas globulaire = cercle croisé,
      nébuleuse planétaire = cercle à repères, nébuleuse = carré, rémanent de supernova = losange. */
+  // Chaque famille d'objets dépend d'une case à cocher : galaxies, nébuleuses (dont planétaires et rémanents de supernova) ou amas.
+  const REGLAGE_DE_FAMILLE = { G: "galaxies", N: "nebuleuses", PN: "nebuleuses", SNR: "nebuleuses", OC: "amas", GC: "amas" };
   const COULEURS_PROFOND = { G: "#ffb070", OC: "#ffe08a", GC: "#ffe08a", PN: "#7fffd4", N: "#7fd0ff", SNR: "#d0a8ff" };
 
   function angleGalaxie(M, i, echelle, cx, cy, px, py) {
@@ -625,6 +629,7 @@ void main() {
       if (sx < -60 || sx > largeur + 60 || sy < -60 || sy > hauteur + 60) continue;
 
       const famille = profond.famille[i];
+      if (!reglages[REGLAGE_DE_FAMILLE[famille]]) continue;
       const a = Math.min(1500, Math.max(5, ((profond.maj[i] / 120) * RAD) * k)); // demi grand axe en pixels, 5 px minimum
       const couleur = COULEURS_PROFOND[famille] || "#ffffff";
       ctx.strokeStyle = couleur;
@@ -802,7 +807,7 @@ void main() {
 
     /* Étoiles */
     const limite = reglages.atmosphere ? Astro.magnitudeLimite(hauteurSoleil, reglages.magLimite) : reglages.magLimite;
-    if (reglages.profond) dessinerProfond(MJ, echelle, cx, cy, limite);
+    if (reglages.galaxies || reglages.nebuleuses || reglages.amas) dessinerProfond(MJ, echelle, cx, cy, limite);
     let couleur = "";
     for (let i = 0; i < etoiles.n; i++) {
       const mag = etoiles.mag[i];
@@ -1528,9 +1533,9 @@ void main() {
     }
 
     const magMax = Math.min(12, limite + 4.5);
-    if (reglages.profond && profond.n > 0 && magMax >= 4) {
+    if ((reglages.galaxies || reglages.nebuleuses || reglages.amas) && profond.n > 0 && magMax >= 4) {
       for (let i = 0; i < profond.n; i++) {
-        if (profond.mag[i] > magMax) continue;
+        if (profond.mag[i] > magMax || !reglages[REGLAGE_DE_FAMILLE[profond.famille[i]]]) continue;
         const [x, y, z] = [profond.x[i], profond.y[i], profond.z[i]];
         const zc = MJ[6] * x + MJ[7] * y + MJ[8] * z;
         if (zc < -0.9 || (cacheParSol && MH[6] * x + MH[7] * y + MH[8] * z < -0.01)) continue;

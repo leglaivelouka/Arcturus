@@ -7,4 +7,4 @@
 - **Météo** : Open-Meteo.com, https://open-meteo.com
 - **Planètes et Lune** : Astronomy Engine, © Don Cross, licence MIT, https://github.com/cosinekitty/astronomy
 - **Galaxies, nébuleuses et amas** : OpenNGC, © Mattia Verga, licence CC BY-SA 4.0, https://github.com/mattiaverga/OpenNGC (le fichier `data/ciel-profond.json` en est dérivé et reste sous la même licence).
-- **Paysage** : « Flamingo Pan », panorama HDRI de Poly Haven (https://polyhaven.com/a/flamingo_pan), licence CC0. Traitement HDRI : Jarod Guest et Dimitrios Savva ; photographie : voir l'auteur indiqué sur la page du panorama. Le fichier `data/paysage.webp` est une version modifiée (conversion en image ordinaire, réduction et ciel rendu transparent).
+- **Paysage** : « Flamingo Pan », panorama HDRI de Poly Haven (https://polyhaven.com/a/flamingo_pan), licence CC0. Traitement HDRI : Jarod Guest ; photographie : voir l'auteur indiqué sur la page du panorama. Le fichier `data/paysage.webp` est une version modifiée (conversion en image ordinaire, réduction et ciel rendu transparent).

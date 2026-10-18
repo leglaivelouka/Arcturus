@@ -154,7 +154,8 @@ dialog input[type="range"] { width: 100%; accent-color: #9db7ea; margin-bottom: 
 .affichage legend { margin-bottom: 0.6rem; padding: 0; font-size: 0.9rem; font-weight: 500; opacity: 0.75; }
 .affichage .case { margin: 0 0 0.7rem; }
 .ico-case { width: 1.4rem; text-align: center; }
-.case input { width: 1.2rem; height: 1.2rem; accent-color: #9db7ea; }
+.case small { opacity: 0.65; }
+.case input { flex: none; width: 1.2rem; height: 1.2rem; accent-color: #9db7ea; }
 .bouton.lien { display: block; text-align: center; text-decoration: none; }
 
 .message-ciel {
