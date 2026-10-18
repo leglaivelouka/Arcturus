@@ -30,7 +30,15 @@
   const borner = (v, min, max) => Math.max(min, Math.min(max, v));
 
   const vue = { az: 0, alt: 40, fov: 80 }; // direction du regard (degrés) et champ vertical
-  let decalageMs = 0;                       // décalage entre l'heure simulée et l'heure réelle
+  // Temps simulé : à l'instant réel ancre.reel, l'heure simulée valait ancre.sim ; elle avance ensuite à la vitesse choisie.
+  let ancre = { reel: Date.now(), sim: Date.now() };
+  let vitesse = 1;                          // secondes simulées par seconde réelle ; négatif = vers le passé, 1 = temps réel
+  let limiteAtteinte = false;
+  const LIMITE_MIN = Date.UTC(1000, 0, 1);  // au-delà, les formules d'éphémérides ne sont plus fiables
+  const LIMITE_MAX = Date.UTC(3000, 0, 1);
+  const PUISSANCE_VITESSE_MAX = 6;          // curseur au bout de la course : ×10^6, soit environ 11 jours par seconde
+  const tempsSimMs = () => ancre.sim + (Date.now() - ancre.reel) * vitesse;
+  const fixerTemps = (ms) => { ancre = { reel: Date.now(), sim: ms }; };
   let largeur = 0;
   let hauteur = 0;
   let ratio = 1;
@@ -760,7 +768,7 @@ void main() {
     aRedessiner = false;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-    const maintenant = new Date(Date.now() + decalageMs);
+    const maintenant = heureSimulee();
     const lstDeg = Astro.tempsSideralLocal(maintenant, position.lon);
     const soleil = Astro.positionSoleil(maintenant);
     const vSoleil = Astro.versHorizon(soleil.ra, soleil.dec, position.lat, lstDeg);
@@ -877,7 +885,7 @@ void main() {
   const curseurHeure = $("curseur-heure");
   let glisseHeure = false; // vrai tant que l'utilisateur manipule le curseur
 
-  function heureSimulee() { return new Date(Date.now() + decalageMs); }
+  function heureSimulee() { return new Date(tempsSimMs()); }
 
   function majHorloge() {
     const d = heureSimulee();
@@ -895,22 +903,79 @@ void main() {
     rafraichirFiche();
   }
 
-  function decalerMinutes(minutes) { decalageMs += minutes * 60000; majHorloge(); }
+  function decalerMinutes(minutes) { fixerTemps(tempsSimMs() + minutes * 60000); majHorloge(); }
 
   function decalerJours(jours) {
     const d = heureSimulee();
     d.setDate(d.getDate() + jours); // garde la même heure locale, même au changement d'heure
-    decalageMs = d.getTime() - Date.now();
+    fixerTemps(d.getTime());
     majHorloge();
   }
 
-  function revenirAMaintenant() { decalageMs = 0; majHorloge(); }
+  function revenirAMaintenant() {
+    fixerTemps(Date.now());
+    vitesse = 1;
+    limiteAtteinte = false;
+    curseurVitesse.value = "0";
+    afficherVitesse();
+    majHorloge();
+  }
+
+  /* ---- Vitesse d'écoulement du temps : curseur au centre = temps réel, à droite = futur, à gauche = passé ---- */
+  const curseurVitesse = $("curseur-vitesse");
+
+  function vitesseDepuisCurseur(s) {
+    if (s === 0) return 1; // centre : temps réel
+    const a = Math.pow(10, (Math.abs(s) / 100) * PUISSANCE_VITESSE_MAX); // de ×1,5 à ×1 000 000, de plus en plus vite vers les bords
+    return s > 0 ? a : -a;
+  }
+
+  function texteVitesse() {
+    if (limiteAtteinte) return "limite atteinte (années 1000 à 3000)";
+    if (vitesse === 1) return "×1 (temps réel)";
+    const a = Math.abs(vitesse);
+    const signe = vitesse < 0 ? "−" : "";
+    let base = `${signe}×${a < 10 ? nf(a, 1) : Math.round(a).toLocaleString("fr-FR")}`;
+    if (a >= 60) {
+      const [valeur, unite] = a >= 31557600 ? [a / 31557600, "an"] : a >= 86400 ? [a / 86400, "j"] : a >= 3600 ? [a / 3600, "h"] : [a / 60, "min"];
+      base += ` (≈ ${valeur < 10 ? nf(valeur, 1) : Math.round(valeur).toLocaleString("fr-FR")} ${unite}/s)`;
+    }
+    return base;
+  }
+
+  function afficherVitesse() {
+    const t = texteVitesse();
+    $("vitesse-valeur").textContent = t;
+    curseurVitesse.setAttribute("aria-valuetext", t);
+  }
+
+  curseurVitesse.addEventListener("input", () => {
+    let s = Number(curseurVitesse.value);
+    if (Math.abs(s) < 3) { s = 0; curseurVitesse.value = "0"; } // zone d'accroche au centre
+    fixerTemps(tempsSimMs()); // le temps repart de l'heure affichée, à la nouvelle vitesse
+    vitesse = vitesseDepuisCurseur(s);
+    limiteAtteinte = false;
+    afficherVitesse();
+  });
+
+  /* Le temps simulé ne dépasse pas les années 1000 à 3000 : on s'arrête à la limite. */
+  function verifierLimites() {
+    if (vitesse === 0) return;
+    const t = tempsSimMs();
+    if (t > LIMITE_MAX || t < LIMITE_MIN) {
+      fixerTemps(t > LIMITE_MAX ? LIMITE_MAX : LIMITE_MIN);
+      vitesse = 0;
+      limiteAtteinte = true;
+      afficherVitesse();
+      majHorloge();
+    }
+  }
 
   /* Curseur : règle l'heure de la journée affichée (de 0 h 00 à 23 h 59), la date ne change pas. */
   function fixerMinutesDuJour(minutes) {
     const d = heureSimulee();
     d.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-    decalageMs = d.getTime() - Date.now();
+    fixerTemps(d.getTime());
     majHorloge();
   }
 
@@ -1016,6 +1081,7 @@ void main() {
 
   function ouvrirPanneau() {
     fermerFiche();
+    $("message-ciel").style.visibility = "hidden"; // les messages d'installation passeraient sous le panneau
     panneau.hidden = false;
     boutonMenu.hidden = true;
     horloge.hidden = true; // l'heure est alors affichée dans le panneau
@@ -1025,6 +1091,7 @@ void main() {
   function fermerPanneau() {
     if (panneau.hidden) return;
     panneau.hidden = true;
+    $("message-ciel").style.visibility = "";
     boutonMenu.hidden = false;
     horloge.hidden = false;
     boutonMenu.setAttribute("aria-expanded", "false");
@@ -1036,19 +1103,17 @@ void main() {
   const interrupteurs = document.querySelectorAll("[data-reglage]");
 
   function appliquerReglages() {
-    for (const b of interrupteurs) b.setAttribute("aria-pressed", String(Boolean(reglages[b.dataset.reglage])));
+    for (const b of interrupteurs) b.checked = Boolean(reglages[b.dataset.reglage]);
     $("voile").hidden = !reglages.nuit;
     document.body.classList.toggle("nuit", reglages.nuit);
-    $("profond-actif").checked = reglages.profond;
     $("mag-limite").value = String(reglages.magLimite);
     $("mag-valeur").textContent = reglages.magLimite.toFixed(1).replace(".", ",");
     aRedessiner = true;
   }
 
   for (const b of interrupteurs) {
-    b.addEventListener("click", () => {
-      const cle = b.dataset.reglage;
-      reglages[cle] = !reglages[cle];
+    b.addEventListener("change", () => {
+      reglages[b.dataset.reglage] = b.checked;
       sauverReglages();
       appliquerReglages();
     });
@@ -1057,11 +1122,6 @@ void main() {
   const dialogueCarte = $("dialogue-carte");
   $("btn-reglages").addEventListener("click", () => dialogueCarte.showModal());
   $("btn-fermer-carte").addEventListener("click", () => dialogueCarte.close());
-  $("profond-actif").addEventListener("change", (e) => {
-    reglages.profond = e.target.checked;
-    sauverReglages();
-    appliquerReglages();
-  });
   $("mag-limite").addEventListener("input", (e) => {
     reglages.magLimite = borner(parseFloat(e.target.value), 3, 6.5);
     sauverReglages();
@@ -1429,7 +1489,7 @@ void main() {
     if (!ficheCourante) return;
     try {
       const cle = jourCle();
-      if (cle !== ficheCourante.jourCle) {
+      if (cle !== ficheCourante.jourCle && Math.abs(vitesse) < 5000) {
         ficheCourante.jourCle = cle;
         ficheCourante.horaires = calculerHoraires(ficheCourante);
       }
@@ -1569,6 +1629,7 @@ void main() {
   window.addEventListener("resize", ajusterTaille);
   ajusterTaille();
   appliquerReglages();
+  afficherVitesse();
   majHorloge();
   setInterval(majHorloge, 1000);
   if (!astronomieOk) ajouterMessage("Planètes et Lune absentes : ouvre outils/telecharger-astronomy.html pour ajouter la bibliothèque.");
@@ -1576,8 +1637,15 @@ void main() {
   chargerConstellations();
   chargerProfond();
   chargerPanorama();
+  let dernierRythme = 0;
   (function boucle() {
     avancerAnimation();
+    verifierLimites();
+    if (Math.abs(vitesse) >= 30) { // le ciel bouge à vue d'œil : image et horloge rafraîchies en continu
+      const t = performance.now();
+      if (t - dernierRythme > 80) { dernierRythme = t; majHorloge(); }
+      aRedessiner = true;
+    }
     if (aRedessiner) dessiner();
     requestAnimationFrame(boucle);
   })();

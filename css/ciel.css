@@ -80,44 +80,11 @@ body.nuit #paysage { filter: grayscale(1); }
   color: #14202e;
 }
 
-.reglages,
 .temps {
   border-radius: 18px;
   background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
 }
 
-.reglages {
-  padding: 0.7rem 0.4rem;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem 0.2rem;
-}
-
-.reglage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: inherit;
-  cursor: pointer;
-}
-
-.reglage .ico {
-  font-size: 1.9rem;
-  line-height: 1;
-  filter: grayscale(1) brightness(0.3);
-}
-
-.reglage[aria-pressed="false"] { opacity: 0.4; }
-.reglage:disabled { opacity: 0.25; cursor: default; }
-
-.reglage:focus-visible,
 .fleches button:focus-visible,
 .engrenage:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
 
@@ -152,6 +119,9 @@ body.nuit #paysage { filter: grayscale(1); }
 
 .barre-heure input[type="range"] { display: block; width: 100%; margin: 0.2rem 0; accent-color: #1d2f5e; touch-action: pan-y; }
 
+.entete-vitesse { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.8rem; font-weight: 500; }
+.entete-vitesse output { font-variant-numeric: tabular-nums; text-align: right; }
+
 .graduations { display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 500; }
 
 .cache {
@@ -179,6 +149,11 @@ body.nuit #paysage { filter: grayscale(1); }
 .champ { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
 dialog input[type="range"] { width: 100%; accent-color: #9db7ea; margin-bottom: 1rem; }
 .case { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 1rem; font-size: 0.9rem; }
+#dialogue-carte { max-height: 90vh; overflow-y: auto; }
+.affichage { margin: 0 0 1.1rem; padding: 0; border: 0; }
+.affichage legend { margin-bottom: 0.6rem; padding: 0; font-size: 0.9rem; font-weight: 500; opacity: 0.75; }
+.affichage .case { margin: 0 0 0.7rem; }
+.ico-case { width: 1.4rem; text-align: center; }
 .case input { width: 1.2rem; height: 1.2rem; accent-color: #9db7ea; }
 .bouton.lien { display: block; text-align: center; text-decoration: none; }
 

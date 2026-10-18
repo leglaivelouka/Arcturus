@@ -27,15 +27,6 @@
   </button>
 
   <div id="panneau" class="panneau" hidden>
-    <div class="reglages" role="group" aria-label="Éléments affichés sur la carte">
-      <button type="button" class="reglage" data-reglage="paysage" aria-pressed="true"><span class="ico" aria-hidden="true">🌲</span>paysage</button>
-      <button type="button" class="reglage" data-reglage="constellations" aria-pressed="true"><span class="ico" aria-hidden="true">✨</span>constellations</button>
-      <button type="button" class="reglage" data-reglage="atmosphere" aria-pressed="true"><span class="ico" aria-hidden="true">☁️</span>atmosphère</button>
-      <button type="button" class="reglage" data-reglage="nuit" aria-pressed="false"><span class="ico" aria-hidden="true">👁️</span>mode nuit</button>
-      <button type="button" class="reglage" data-reglage="noms" aria-pressed="true"><span class="ico" aria-hidden="true">🏷️</span>noms</button>
-      <button type="button" class="reglage" data-reglage="lignes" aria-pressed="false"><span class="ico" aria-hidden="true">🌐</span>lignes</button>
-    </div>
-
     <div class="bas-panneau">
       <div class="temps">
         <div class="ligne-temps">
@@ -63,6 +54,15 @@
       <input id="curseur-heure" type="range" min="0" max="1439" step="1" value="0">
       <div class="graduations" aria-hidden="true"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
     </div>
+
+    <div class="barre-heure barre-vitesse">
+      <div class="entete-vitesse">
+        <label for="curseur-vitesse">Vitesse du temps</label>
+        <output id="vitesse-valeur">×1 (temps réel)</output>
+      </div>
+      <input id="curseur-vitesse" type="range" min="-100" max="100" step="1" value="0">
+      <div class="graduations" aria-hidden="true"><span>passé</span><span>temps réel</span><span>futur</span></div>
+    </div>
   </div>
 
   <aside id="fiche" class="fiche" role="dialog" aria-labelledby="fiche-titre" hidden>
@@ -83,9 +83,21 @@
 
   <dialog id="dialogue-carte" aria-labelledby="titre-carte">
     <h2 id="titre-carte">Réglages de la carte</h2>
+
+    <fieldset class="affichage">
+      <legend>Affichage</legend>
+      <label class="case"><input type="checkbox" data-reglage="paysage"><span class="ico-case" aria-hidden="true">🌲</span>Paysage</label>
+      <label class="case"><input type="checkbox" data-reglage="constellations"><span class="ico-case" aria-hidden="true">✨</span>Constellations</label>
+      <label class="case"><input type="checkbox" data-reglage="atmosphere"><span class="ico-case" aria-hidden="true">☁️</span>Atmosphère</label>
+      <label class="case"><input type="checkbox" data-reglage="noms"><span class="ico-case" aria-hidden="true">🏷️</span>Noms des astres</label>
+      <label class="case"><input type="checkbox" data-reglage="lignes"><span class="ico-case" aria-hidden="true">🌐</span>Lignes (azimut et hauteur)</label>
+      <label class="case"><input type="checkbox" data-reglage="profond"><span class="ico-case" aria-hidden="true">🔭</span>Galaxies, nébuleuses et amas</label>
+      <label class="case"><input type="checkbox" data-reglage="nuit"><span class="ico-case" aria-hidden="true">👁️</span>Mode nuit (écran rouge)</label>
+    </fieldset>
+
     <label class="champ" for="mag-limite">Étoiles visibles jusqu'à la magnitude <output id="mag-valeur">6,5</output></label>
     <input id="mag-limite" type="range" min="3" max="6.5" step="0.1" value="6.5">
-    <label class="case"><input id="profond-actif" type="checkbox" checked> Galaxies, nébuleuses et amas</label>
+
     <a class="bouton lien" href="index.html">retour à l'accueil</a>
     <button id="btn-fermer-carte" class="bouton discret" type="button">Fermer</button>
   </dialog>
