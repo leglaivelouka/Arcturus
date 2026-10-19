@@ -1,5 +1,9 @@
-/* Écran de chargement : image « Arcturus » plein écran et anneau rouge qui tourne sur le bord du disque. */
+/* Écran de chargement : image « Arcturus » et anneau rouge qui tourne sur le bord du disque.
+   Sur téléphone il remplit l'écran ; sur ordinateur il garde la largeur de la page d'accueil (max-width de .ecran, 430 px)
+   et les côtés montrent la même image, floutée et assombrie. */
 #splash {
+  --largeur-ecran: 430px; /* à garder identique au max-width de .ecran dans css/style.css */
+  --hauteur: 100vh;       /* hauteur de la colonne d'image : tout l'écran, sauf sur ordinateur (voir plus bas) */
   position: fixed;
   inset: 0;
   z-index: 99999;
@@ -17,20 +21,59 @@
   transition: opacity 0.35s ease, visibility 0s linear 0.35s;
 }
 
-/* L'image est affichée en « cover » (elle remplit l'écran) : le cadre garde ses proportions (557 × 991),
+/* Arrière-plan des côtés (ordinateur) : la même image, floutée. Inutile, donc retiré, quand l'écran n'est pas plus large que la colonne. */
+#splash::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  background: url("../assets/chargement.webp") center top / cover no-repeat;
+  filter: blur(46px) brightness(0.42) saturate(1.15);
+}
+
+@media (max-width: 430px) {
+  #splash::before { display: none; }
+}
+
+/* Sur ordinateur, la colonne garde les proportions d'un téléphone (430 × 882 au plus) : l'image ne grossit pas
+   quand la fenêtre est très haute, elle reste centrée sur le fond flou. */
+@media (min-width: 600px) {
+  #splash { --hauteur: min(100vh, calc(min(100vw, var(--largeur-ecran)) * 2.0511)); }
+}
+
+@supports (width: 1dvh) {
+  #splash { --hauteur: 100dvh; }
+  @media (min-width: 600px) {
+    #splash { --hauteur: min(100dvh, calc(min(100vw, var(--largeur-ecran)) * 2.0511)); }
+  }
+}
+
+/* Ombre légère sur les bords de la colonne. */
+#splash::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(100vw, var(--largeur-ecran));
+  height: var(--hauteur);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 60px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* L'image est affichée en « cover » dans la colonne : le cadre garde ses proportions (557 × 991),
    de sorte que l'anneau, placé en pourcentages, reste toujours exactement sur le disque du logo. */
 .splash-cadre {
-  --u: calc(max(100vw, 100vh * 0.56206) / 100); /* 1 % de la largeur du cadre */
+  --colonne: min(100vw, var(--largeur-ecran));
+  --u: calc(max(var(--colonne), var(--hauteur) * 0.56206) / 100); /* 1 % de la largeur du cadre */
   position: absolute;
+  z-index: 1;
   left: 50%;
   top: 50%;
   width: calc(var(--u) * 100);
   aspect-ratio: 557 / 991;
   transform: translate(-50%, -50%);
-}
-
-@supports (width: 1dvh) {
-  .splash-cadre { --u: calc(max(100vw, 100dvh * 0.56206) / 100); }
+  /* Ce qui dépasse de la colonne est coupé, comme sur un téléphone. */
+  clip-path: inset(calc((100% - var(--hauteur)) / 2) calc((100% - var(--colonne)) / 2));
 }
 
 .splash-image { display: block; width: 100%; height: 100%; }
