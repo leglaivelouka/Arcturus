@@ -2,6 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
+  <link rel="preload" as="image" href="assets/chargement.webp">
+  <link rel="stylesheet" href="css/splash.css">
+  <script src="js/splash.js"></script>
+  <noscript><style>#splash { display: none; }</style></noscript>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0718">
   <title>Arcturus : le ciel de ce soir</title>
@@ -11,9 +15,15 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="theme-rouge">
+  <div id="splash" role="status" aria-label="Chargement en cours">
+  <div class="splash-cadre">
+    <img class="splash-image" src="assets/chargement.webp" alt="">
+    <div class="splash-anneau"></div>
+  </div>
+  </div>
   <main class="ecran">
 
-    <a class="titre" href="ciel.html">le ciel de ce soir <span aria-hidden="true">🔭</span></a>
+    <a class="titre" href="ciel.html">le ciel de ce soir <span aria-hidden="true"></span></a>
 
     <button id="btn-position" class="hexagone" type="button">ma position</button>
 
@@ -21,7 +31,7 @@
       <p id="heure" class="heure" aria-label="Heure actuelle">00:00</p>
 
       <article class="carte meteo">
-        <h2>météo <span aria-hidden="true">🌙</span></h2>
+        <h2>météo <span aria-hidden="true">  ☁</span></h2>
         <div id="meteo-valeurs" class="mesures" aria-live="polite"></div>
       </article>
     </section>
@@ -34,9 +44,9 @@
     <a class="pastille" href="profil.html">profil</a>
 
     <nav class="barre" aria-label="Navigation principale">
-      <a href="catalogue.html"><span class="icone" aria-hidden="true">📄</span>catalogue</a>
-      <a href="settings.html"><span class="icone" aria-hidden="true">⚙️</span>settings</a>
-      <a href="forum.html"><span class="icone" aria-hidden="true">🪐</span>forum</a>
+      <a href="catalogue.html"><span class="icone" aria-hidden="true">𖤘</span>catalogue</a>
+      <a href="settings.html"><span class="icone" aria-hidden="true">⚙</span>settings</a>
+      <a href="forum.html"><span class="icone" aria-hidden="true">✵</span>forum</a>
     </nav>
 
   </main>

@@ -475,6 +475,10 @@
   /* ---------- Paysage photographique : panorama équirectangulaire à ciel transparent (data/paysage.webp), rendu en WebGL ----------
      Si le fichier ou WebGL manque, on garde le paysage généré. */
   const PANORAMA = { pret: false, gl: null, programme: null, u: {}, visible: null };
+  // Annonce à l'écran de chargement (js/splash.js) que la carte est prête : panorama traité et première image dessinée.
+  let panoramaTermine = false;
+  let resoudrePret = null;
+  window.arcturusPret = new Promise((resolve) => { resoudrePret = resolve; });
   const DECALAGE_AZIMUT_PANORAMA = -0.152; // fraction de tour : place le couchant du panorama à l'ouest
 
   const SOURCE_VERTEX = "attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }";
@@ -517,7 +521,7 @@ void main() {
   function chargerPanorama() {
     try {
       const gl = canvasPano.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false });
-      if (!gl) return;
+      if (!gl) { panoramaTermine = true; return; }
       const prog = gl.createProgram();
       gl.attachShader(prog, compilerShader(gl, gl.VERTEX_SHADER, SOURCE_VERTEX));
       gl.attachShader(prog, compilerShader(gl, gl.FRAGMENT_SHADER, SOURCE_FRAGMENT));
@@ -554,10 +558,14 @@ void main() {
           PANORAMA.u = u;
           PANORAMA.pret = true;
           aRedessiner = true;
-        } catch { /* texture refusée : on garde le paysage généré */ }
+        } catch { /* texture refusée : on garde le paysage généré */ } finally {
+          panoramaTermine = true;
+          aRedessiner = true;
+        }
       };
+      image.onerror = () => { panoramaTermine = true; };
       image.src = "data/paysage.webp"; // absent : pas d'erreur visible, le paysage généré reste affiché
-    } catch { /* WebGL indisponible : on garde le paysage généré */ }
+    } catch { panoramaTermine = true; /* WebGL indisponible : on garde le paysage généré */ }
   }
 
   function dessinerPanorama(base, echelle, hauteurSoleil) {
@@ -1652,6 +1660,7 @@ void main() {
       aRedessiner = true;
     }
     if (aRedessiner) dessiner();
+    if (resoudrePret && panoramaTermine && etoiles.n > 0) { resoudrePret(); resoudrePret = null; }
     requestAnimationFrame(boucle);
   })();
 })();

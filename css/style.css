@@ -83,7 +83,8 @@ a, button { font-family: inherit; color: inherit; }
 }
 
 .heure {
-  font-size: clamp(2.4rem, 12vw, 3.4rem);
+  font-size: clamp(4.4rem, 12vw, 2.4rem);
+  font-family: "Neue Gstaad";
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -229,7 +230,7 @@ dialog h2 { font-size: 1.1rem; margin-bottom: 1rem; }
 
 /* ---------- Thème rouge et noir (accueil uniquement : <body class="theme-rouge">) ---------- */
 body.theme-rouge {
-  --degrade: linear-gradient(135deg, rgba(222, 32, 38, 0.94) 0%, rgba(112, 11, 17, 0.94) 55%, rgba(26, 4, 7, 0.96) 100%);
+  --degrade: linear-gradient(135deg, rgba(230, 21, 28, 0.94) 0%, rgba(112, 11, 17, 0.94) 55%, rgba(26, 4, 7, 0.96) 100%);
   background-color: #0a0203;
   
  
@@ -237,8 +238,10 @@ body.theme-rouge {
 
 body.theme-rouge .titre,
 body.theme-rouge .pastille {
-  background: linear-gradient(135deg, rgba(204, 24, 30, 0.95), rgba(48, 6, 9, 0.96));
+  transition: transform 0.2s ease;
+  background: linear-gradient(135deg, rgba(190, 27, 27, 0.95), rgba(48, 6, 9, 0.96));
 }
+
 
 body.theme-rouge .icone {
   background: linear-gradient(135deg, #dc2a30, #3d080b);

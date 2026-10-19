@@ -1,0 +1,70 @@
+/* Écran de chargement : image « Arcturus » plein écran et anneau rouge qui tourne sur le bord du disque. */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  overflow: hidden;
+  background: #12030a; /* visible tant que l'image n'est pas affichée : jamais de blanc ni de noir pur */
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.15s ease;
+}
+
+#splash.cache {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+}
+
+/* L'image est affichée en « cover » (elle remplit l'écran) : le cadre garde ses proportions (557 × 991),
+   de sorte que l'anneau, placé en pourcentages, reste toujours exactement sur le disque du logo. */
+.splash-cadre {
+  --u: calc(max(100vw, 100vh * 0.56206) / 100); /* 1 % de la largeur du cadre */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--u) * 100);
+  aspect-ratio: 557 / 991;
+  transform: translate(-50%, -50%);
+}
+
+@supports (width: 1dvh) {
+  .splash-cadre { --u: calc(max(100vw, 100dvh * 0.56206) / 100); }
+}
+
+.splash-image { display: block; width: 100%; height: 100%; }
+
+/* Disque du logo : centre à 49,799 % / 49,876 %, diamètre 70,366 % de la largeur. */
+.splash-anneau {
+  --e: calc(var(--u) * 0.75); /* épaisseur du trait */
+  position: absolute;
+  left: 49.799%;
+  top: 49.876%;
+  width: 70.366%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.25) rgba(255, 70, 50, 0.22); /* piste : le cercle entier, discret */
+}
+
+/* Le trait rouge : une comète qui parcourt le périmètre dans le sens des aiguilles d'une montre. */
+.splash-anneau::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(255, 59, 42, 0) 0deg, rgba(255, 59, 42, 0) 190deg, rgba(255, 59, 42, 0.85) 335deg, #ff9a7a 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--e)), #000 calc(100% - var(--e) + 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--e)), #000 calc(100% - var(--e) + 1px));
+  filter: drop-shadow(0 0 calc(var(--u) * 1) rgba(255, 70, 50, 0.9));
+  animation: splash-tour 1.5s linear infinite;
+}
+
+@keyframes splash-tour {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-anneau::before { animation: none; opacity: 0.8; }
+}
