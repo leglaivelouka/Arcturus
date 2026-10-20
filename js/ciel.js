@@ -9,7 +9,7 @@
   const FOV_MIN = 5;
   const FOV_MAX = 130;
   const REGLAGES_DEFAUT = {
-    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, galaxies: true, nebuleuses: true, amas: true, magLimite: 6.5,
+    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, grilleEquatoriale: false, ecliptique: false, galaxies: true, nebuleuses: true, amas: true, magLimite: 6.5,
   };
 
   /* Étoiles de démonstration, utilisées seulement si data/etoiles.json est absent : [RA en heures, Dec, mag, B-V]. */
@@ -310,6 +310,87 @@
     ctx.beginPath();
     for (const l of GRILLE) if (l.horizon) tracerPolyligne(l.pts, base, echelle, cx, cy);
     ctx.stroke();
+  }
+
+  /* ---------- Grille équatoriale et écliptique (repère équatorial de la date) ---------- */
+  const GRILLE_EQUATORIALE = (function () {
+    const lignes = [];
+    for (let dec = -75; dec <= 75; dec += 15) {
+      const pts = [];
+      for (let ra = 0; ra <= 360; ra += 3) pts.push(vecteurEquatorial(ra, dec));
+      lignes.push({ pts, equateur: dec === 0 });
+    }
+    for (let ra = 0; ra < 360; ra += 30) { // un méridien toutes les 2 h d'ascension droite
+      const pts = [];
+      for (let dec = -87; dec <= 87; dec += 3) pts.push(vecteurEquatorial(ra, dec));
+      lignes.push({ pts, equateur: false });
+    }
+    return lignes;
+  })();
+
+  const LONGITUDES_ECLIPTIQUE = Array.from({ length: 361 }, (_, i) => [Math.cos(i * RAD), Math.sin(i * RAD)]);
+
+  /* Points de l'écliptique dans le repère équatorial de la date (l'obliquité varie très lentement). */
+  function pointsEcliptique(date) {
+    const T = (Astro.jourJulien(date) - 2451545.0) / 36525;
+    const eps = (23.439291 - 0.0130042 * T) * RAD;
+    const ce = Math.cos(eps);
+    const se = Math.sin(eps);
+    return LONGITUDES_ECLIPTIQUE.map(([c, sl]) => [c, sl * ce, sl * se]);
+  }
+
+  /* Trace une ligne définie par des vecteurs et une matrice de projection ; renvoie le point visible le plus proche du centre. */
+  function tracerLigneMatrice(pts, M, echelle, cx, cy) {
+    const maxSaut = 4 * Math.max(largeur, hauteur);
+    let precedent = null;
+    let meilleur = null;
+    let distMin = Infinity;
+    for (const v of pts) {
+      const p = projeterJ2000(M, v[0], v[1], v[2], echelle, cx, cy);
+      if (!p) { precedent = null; continue; }
+      if (precedent && Math.hypot(p[0] - precedent[0], p[1] - precedent[1]) < maxSaut) ctx.lineTo(p[0], p[1]);
+      else ctx.moveTo(p[0], p[1]);
+      precedent = p;
+      if (p[0] > 40 && p[0] < largeur - 40 && p[1] > 40 && p[1] < hauteur - 40) {
+        const d = Math.hypot(p[0] - cx, p[1] - cy);
+        if (d < distMin) { distMin = d; meilleur = p; }
+      }
+    }
+    return meilleur;
+  }
+
+  function dessinerGrilleEquatoriale(MD, echelle, cx, cy) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(110, 215, 175, 0.3)";
+    ctx.beginPath();
+    for (const l of GRILLE_EQUATORIALE) if (!l.equateur) tracerLigneMatrice(l.pts, MD, echelle, cx, cy);
+    ctx.stroke();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = "rgba(130, 235, 190, 0.65)";
+    ctx.beginPath();
+    let etiquette = null;
+    for (const l of GRILLE_EQUATORIALE) if (l.equateur) etiquette = tracerLigneMatrice(l.pts, MD, echelle, cx, cy);
+    ctx.stroke();
+    if (reglages.noms && etiquette) {
+      ctx.font = "12px Poppins, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(150, 240, 205, 0.95)";
+      ctx.fillText("Équateur céleste", etiquette[0] + 8, etiquette[1] - 7);
+    }
+  }
+
+  function dessinerEcliptique(MD, date, echelle, cx, cy) {
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "rgba(255, 205, 80, 0.85)";
+    ctx.beginPath();
+    const etiquette = tracerLigneMatrice(pointsEcliptique(date), MD, echelle, cx, cy);
+    ctx.stroke();
+    if (reglages.noms && etiquette) {
+      ctx.font = "12px Poppins, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(255, 220, 120, 0.95)";
+      ctx.fillText("Écliptique", etiquette[0] + 8, etiquette[1] - 7);
+    }
   }
 
   function dessinerSol(echelle, cx, cy, couleur) {
@@ -794,8 +875,10 @@ void main() {
     const boost = Math.pow(80 / vue.fov, 0.3);
 
     /* Matrice des objets au catalogue J2000 (précession incluse), de l'équatorial vers l'écran. */
-    const MH = Astro.mulMat(Astro.matriceHorizon(position.lat, lstDeg), Astro.matricePrecession(maintenant));
+    const Hz = Astro.matriceHorizon(position.lat, lstDeg);
+    const MH = Astro.mulMat(Hz, Astro.matricePrecession(maintenant));
     const MJ = Astro.mulMat(Astro.matriceCamera(base), MH);
+    const MD = Astro.mulMat(Astro.matriceCamera(base), Hz); // pour ce qui est défini dans le repère équatorial de la date
 
     /* Fond : dégradé de l'atmosphère ancré sur l'horizon, ou espace noir. */
     if (reglages.atmosphere) {
@@ -812,6 +895,8 @@ void main() {
     ctx.fillRect(0, 0, largeur, hauteur);
 
     if (reglages.lignes) dessinerGrille(base, echelle, cx, cy);
+    if (reglages.grilleEquatoriale) dessinerGrilleEquatoriale(MD, echelle, cx, cy);
+    if (reglages.ecliptique) dessinerEcliptique(MD, maintenant, echelle, cx, cy);
 
     /* Étoiles */
     const limite = reglages.atmosphere ? Astro.magnitudeLimite(hauteurSoleil, reglages.magLimite) : reglages.magLimite;
