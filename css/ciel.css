@@ -22,8 +22,18 @@ body { background: #040815; }
   pointer-events: none;
 }
 
+/* Voie lactée : une lueur qui s'ajoute (mode « screen ») au ciel dessiné dessous ; le noir n'a aucun effet. */
+#voielactee {
+  position: fixed;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 /* Mode nuit : tout passe en nuances de rouge pour préserver la vision nocturne. */
 body.nuit #ciel,
+body.nuit #voielactee,
 body.nuit #paysage { filter: grayscale(1); }
 
 .voile {

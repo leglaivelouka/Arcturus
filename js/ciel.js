@@ -9,7 +9,7 @@
   const FOV_MIN = 5;
   const FOV_MAX = 130;
   const REGLAGES_DEFAUT = {
-    paysage: true, constellations: true, atmosphere: true, nuit: false, noms: true, lignes: false, grilleEquatoriale: false, ecliptique: false, galaxies: true, nebuleuses: true, amas: true, magLimite: 6.5,
+    paysage: true, constellations: true, atmosphere: true, voieLactee: true, nuit: false, noms: true, lignes: false, grilleEquatoriale: false, ecliptique: false, galaxies: true, nebuleuses: true, amas: true, magLimite: 6.5,
   };
 
   /* Étoiles de démonstration, utilisées seulement si data/etoiles.json est absent : [RA en heures, Dec, mag, B-V]. */
@@ -26,6 +26,7 @@
   const $ = (id) => document.getElementById(id);
   const canvas = $("ciel");
   const canvasPano = $("paysage");
+  const canvasVoie = $("voielactee");
   const ctx = canvas.getContext("2d");
   const borner = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -250,6 +251,10 @@
     canvas.height = Math.round(hauteur * ratio);
     canvas.style.width = largeur + "px";
     canvas.style.height = hauteur + "px";
+    canvasVoie.width = canvas.width;
+    canvasVoie.height = canvas.height;
+    canvasVoie.style.width = largeur + "px";
+    canvasVoie.style.height = hauteur + "px";
     canvasPano.width = canvas.width;
     canvasPano.height = canvas.height;
     canvasPano.style.width = largeur + "px";
@@ -551,6 +556,100 @@
       if (p && p[0] > 20 && p[0] < largeur - 20 && p[1] > 20 && p[1] < hauteur - 20) ctx.fillText(nom.nom, p[0], p[1]);
     }
     if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  }
+
+  /* ---------- Voie lactée : carte du ciel entier (data/voie-lactee.webp) projetée en WebGL ----------
+     Carte équirectangulaire en coordonnées célestes J2000, centrée sur 0 h, ascension droite croissante vers la gauche
+     (disposition des cartes « Deep Star Maps » de la NASA). Elle s'ajoute à la lueur du ciel ; elle disparaît quand le jour se lève. */
+  const VOIE = { pret: false, gl: null, programme: null, u: {}, visible: null };
+  let voieTerminee = false;
+
+  const SOURCE_FRAGMENT_VOIE = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;
+uniform float uEchelle;
+uniform mat3 uMat;      // repère de la caméra -> repère équatorial J2000
+uniform float uGain;
+uniform sampler2D uTex;
+void main() {
+  vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uEchelle;
+  float r2 = dot(p, p);
+  float d = 4.0 + r2;
+  vec3 c = vec3(4.0 * p.x / d, 4.0 * p.y / d, (4.0 - r2) / d);
+  vec3 v = uMat * c;
+  float ra = atan(v.y, v.x);                       // -pi..pi
+  float dec = asin(clamp(v.z, -1.0, 1.0));
+  vec2 uv = vec2(fract(0.5 - ra / 6.2831853), 0.5 - dec / 3.1415927);
+  gl_FragColor = vec4(texture2D(uTex, uv).rgb * uGain, 1.0);
+}`;
+
+  function chargerVoieLactee() {
+    try {
+      const gl = canvasVoie.getContext("webgl", { alpha: false, antialias: false });
+      if (!gl) { voieTerminee = true; return; }
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compilerShader(gl, gl.VERTEX_SHADER, SOURCE_VERTEX));
+      gl.attachShader(prog, compilerShader(gl, gl.FRAGMENT_SHADER, SOURCE_FRAGMENT_VOIE));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error("programme");
+      gl.useProgram(prog);
+
+      const tampon = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, tampon);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, "a");
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+      const u = {};
+      for (const nom of ["uRes", "uEchelle", "uMat", "uGain", "uTex"]) u[nom] = gl.getUniformLocation(prog, nom);
+
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const texture = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.uniform1i(u.uTex, 0);
+          VOIE.gl = gl;
+          VOIE.programme = prog;
+          VOIE.u = u;
+          VOIE.pret = true;
+        } catch { /* texture refusée : pas de voie lactée */ } finally {
+          voieTerminee = true;
+          aRedessiner = true;
+        }
+      };
+      image.onerror = () => { voieTerminee = true; };
+      image.src = "data/voie-lactee.webp"; // absent : on n'affiche simplement pas de voie lactée
+    } catch { voieTerminee = true; /* WebGL indisponible */ }
+  }
+
+  function dessinerVoieLactee(MJ, echelle, hauteurSoleil) {
+    // Elle s'efface quand le Soleil se rapproche de l'horizon (invisible au-dessus de -9°, pleine à -18°) et quand la limite de magnitude est basse (ciel pollué).
+    const nuit = reglages.atmosphere ? borner((-hauteurSoleil - 9) / 9, 0, 1) : 1;
+    const pollution = borner((reglages.magLimite - 3) / 3.5, 0.15, 1);
+    const gain = nuit * pollution;
+    const actif = reglages.voieLactee && VOIE.pret && gain > 0.01;
+    if (VOIE.visible !== actif) { VOIE.visible = actif; canvasVoie.hidden = !actif; }
+    if (!actif) return;
+    const gl = VOIE.gl;
+    gl.viewport(0, 0, canvasVoie.width, canvasVoie.height);
+    gl.useProgram(VOIE.programme);
+    gl.uniform2f(VOIE.u.uRes, canvasVoie.width, canvasVoie.height);
+    gl.uniform1f(VOIE.u.uEchelle, echelle * ratio);
+    gl.uniformMatrix3fv(VOIE.u.uMat, false, new Float32Array(MJ)); // MJ est orthonormée : ses lignes lues en colonnes donnent sa transposée (= son inverse)
+    gl.uniform1f(VOIE.u.uGain, gain);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
   /* ---------- Paysage photographique : panorama équirectangulaire à ciel transparent (data/paysage.webp), rendu en WebGL ----------
@@ -893,6 +992,8 @@ void main() {
       ctx.fillStyle = "#02040a";
     }
     ctx.fillRect(0, 0, largeur, hauteur);
+
+    dessinerVoieLactee(MJ, echelle, hauteurSoleil);
 
     if (reglages.lignes) dessinerGrille(base, echelle, cx, cy);
     if (reglages.grilleEquatoriale) dessinerGrilleEquatoriale(MD, echelle, cx, cy);
@@ -1735,6 +1836,7 @@ void main() {
   chargerConstellations();
   chargerProfond();
   chargerPanorama();
+  chargerVoieLactee();
   let dernierRythme = 0;
   (function boucle() {
     avancerAnimation();
@@ -1745,7 +1847,7 @@ void main() {
       aRedessiner = true;
     }
     if (aRedessiner) dessiner();
-    if (resoudrePret && panoramaTermine && etoiles.n > 0) { resoudrePret(); resoudrePret = null; }
+    if (resoudrePret && panoramaTermine && voieTerminee && etoiles.n > 0) { resoudrePret(); resoudrePret = null; }
     requestAnimationFrame(boucle);
   })();
 })();
