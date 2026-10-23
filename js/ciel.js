@@ -630,7 +630,8 @@ void main() {
         }
       };
       image.onerror = () => { voieTerminee = true; };
-      image.src = "data/voie-lactee.webp"; // absent : on n'affiche simplement pas de voie lactée
+      // Les appareils anciens n'acceptent pas les textures de 4096 px : ils reçoivent la version 2048.
+      image.src = gl.getParameter(gl.MAX_TEXTURE_SIZE) >= 4096 ? "data/voie-lactee.webp" : "data/voie-lactee-2k.webp"; // absent : pas de voie lactée
     } catch { voieTerminee = true; /* WebGL indisponible */ }
   }
 
