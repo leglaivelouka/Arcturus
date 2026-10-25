@@ -573,6 +573,8 @@ precision mediump float;
 uniform vec2 uRes;
 uniform float uEchelle;
 uniform mat3 uMat;      // repère de la caméra -> repère équatorial J2000
+uniform mat3 uHor;      // repère de la caméra -> repère de l'horizon [est, nord, haut]
+uniform float uAtmo;    // 1 si l'atmosphère est activée
 uniform float uGain;
 uniform sampler2D uTex;
 void main() {
@@ -584,7 +586,12 @@ void main() {
   float ra = atan(v.y, v.x);                       // -pi..pi
   float dec = asin(clamp(v.z, -1.0, 1.0));
   vec2 uv = vec2(fract(0.5 - ra / 6.2831853), 0.5 - dec / 3.1415927);
-  gl_FragColor = vec4(texture2D(uTex, uv).rgb * uGain, 1.0);
+  // Atmosphère : la voie lactée paraît plus pâle à l'œil, et elle s'éteint près de l'horizon (extinction par la masse d'air traversée).
+  float s = max((uHor * c).z, 0.02);
+  float masse = 1.0 / (s + 0.025 * exp(-11.0 * s));
+  float extinction = pow(10.0, -0.4 * 0.25 * (masse - 1.0));
+  float atmo = mix(1.0, 0.45 * extinction, uAtmo);
+  gl_FragColor = vec4(texture2D(uTex, uv).rgb * uGain * atmo, 1.0);
 }`;
 
   function chargerVoieLactee() {
@@ -606,7 +613,7 @@ void main() {
       gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
       const u = {};
-      for (const nom of ["uRes", "uEchelle", "uMat", "uGain", "uTex"]) u[nom] = gl.getUniformLocation(prog, nom);
+      for (const nom of ["uRes", "uEchelle", "uMat", "uHor", "uAtmo", "uGain", "uTex"]) u[nom] = gl.getUniformLocation(prog, nom);
 
       const image = new Image();
       image.onload = () => {
@@ -635,7 +642,7 @@ void main() {
     } catch { voieTerminee = true; /* WebGL indisponible */ }
   }
 
-  function dessinerVoieLactee(MJ, echelle, hauteurSoleil) {
+  function dessinerVoieLactee(MJ, echelle, hauteurSoleil, base) {
     // Elle s'efface quand le Soleil se rapproche de l'horizon (invisible au-dessus de -9°, pleine à -18°) et quand la limite de magnitude est basse (ciel pollué).
     const nuit = reglages.atmosphere ? borner((-hauteurSoleil - 9) / 9, 0, 1) : 1;
     const pollution = borner((reglages.magLimite - 3) / 3.5, 0.15, 1);
@@ -649,6 +656,8 @@ void main() {
     gl.uniform2f(VOIE.u.uRes, canvasVoie.width, canvasVoie.height);
     gl.uniform1f(VOIE.u.uEchelle, echelle * ratio);
     gl.uniformMatrix3fv(VOIE.u.uMat, false, new Float32Array(MJ)); // MJ est orthonormée : ses lignes lues en colonnes donnent sa transposée (= son inverse)
+    gl.uniformMatrix3fv(VOIE.u.uHor, false, new Float32Array(Astro.matriceCamera(base))); // même astuce : lignes lues en colonnes = transposée
+    gl.uniform1f(VOIE.u.uAtmo, reglages.atmosphere ? 1 : 0);
     gl.uniform1f(VOIE.u.uGain, gain);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
@@ -994,7 +1003,7 @@ void main() {
     }
     ctx.fillRect(0, 0, largeur, hauteur);
 
-    dessinerVoieLactee(MJ, echelle, hauteurSoleil);
+    dessinerVoieLactee(MJ, echelle, hauteurSoleil, base);
 
     if (reglages.lignes) dessinerGrille(base, echelle, cx, cy);
     if (reglages.grilleEquatoriale) dessinerGrilleEquatoriale(MD, echelle, cx, cy);
