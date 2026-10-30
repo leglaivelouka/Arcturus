@@ -155,17 +155,133 @@ body.nuit #paysage { filter: grayscale(1); }
 
 .engrenage span { filter: grayscale(1) brightness(0.3); }
 
-/* ---------- Fenêtre des réglages de la carte ---------- */
-.champ { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
-dialog input[type="range"] { width: 100%; accent-color: #9db7ea; margin-bottom: 1rem; }
-.case { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 1rem; font-size: 0.9rem; }
-#dialogue-carte { max-height: 90vh; overflow-y: auto; }
-.affichage { margin: 0 0 1.1rem; padding: 0; border: 0; }
-.affichage legend { margin-bottom: 0.6rem; padding: 0; font-size: 0.9rem; font-weight: 500; opacity: 0.75; }
-.affichage .case { margin: 0 0 0.7rem; }
-.ico-case { width: 1.4rem; text-align: center; }
-.case small { opacity: 0.65; }
-.case input { flex: none; width: 1.2rem; height: 1.2rem; accent-color: #9db7ea; }
+/* ---------- Fenêtre des réglages de la carte : panneau rouge sur le côté droit ---------- */
+#dialogue-carte {
+  position: fixed;
+  inset: auto;
+  top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  right: 0.5rem;
+  margin: 0;
+  width: clamp(14rem, 54vw, 18.5rem);
+  max-height: min(80vh, 36rem);
+  padding: 0.45rem 0.4rem 0.7rem 0.45rem;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0.25rem 0.25rem 0.25rem 1rem;
+  background: linear-gradient(to bottom, rgba(104, 20, 26, 0.94), rgba(204, 42, 46, 0.94));
+  color: #1f1517;
+  scrollbar-color: #8a7676 #e2d1d1;
+}
+
+#dialogue-carte::backdrop { background: transparent; } /* la carte reste visible derrière le panneau */
+
+@supports not (scrollbar-color: auto) {
+  #dialogue-carte::-webkit-scrollbar { width: 0.9rem; }
+  #dialogue-carte::-webkit-scrollbar-track { background: #e2d1d1; }
+  #dialogue-carte::-webkit-scrollbar-thumb { background: #8a7676; border: 3px solid #e2d1d1; border-radius: 0.45rem; }
+}
+
+.reglages-tete { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.55rem; }
+
+.pastille-section {
+  margin: 0;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: #e2d1d1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.reglages-tete .pastille-section { flex: 1; }
+
+.bouton-croix {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.7rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #c3b6b6;
+  color: #1f1517;
+  cursor: pointer;
+}
+
+.bouton-croix svg { width: 1.2rem; height: 1.2rem; }
+.bouton-croix:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.groupe { margin: 0 0 0.9rem; }
+.groupe .pastille-section { display: inline-block; margin-bottom: 0.5rem; }
+
+/* Une ligne : case à cocher dans un onglet qui pointe vers l'étiquette, comme sur la maquette. */
+.ligne-reglage { display: flex; align-items: stretch; gap: 0.3rem; margin: 0 0 0.45rem; cursor: pointer; }
+
+.onglet {
+  flex: none;
+  display: flex;
+  align-items: center;
+  width: 2.8rem;
+  padding-left: 0.6rem;
+  background: #e2d1d1;
+  clip-path: polygon(0 0, calc(100% - 0.55rem) 0, 100% 50%, calc(100% - 0.55rem) 100%, 0 100%);
+}
+
+.etiquette {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: #e2d1d1;
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.etiquette small { margin-left: 0.25em; opacity: 0.65; }
+
+.ligne-reglage input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: 0;
+  border-radius: 0.2rem;
+  background: #242122;
+  cursor: pointer;
+}
+
+.ligne-reglage input[type="checkbox"]::after {
+  content: "";
+  width: 0.38rem;
+  height: 0.7rem;
+  border: solid #fff;
+  border-width: 0 0.17rem 0.17rem 0;
+  transform: translateY(-0.08rem) rotate(45deg);
+  opacity: 0;
+}
+
+.ligne-reglage input[type="checkbox"]:checked::after { opacity: 1; }
+.ligne-reglage:focus-within .etiquette { outline: 3px solid #fff; outline-offset: 1px; }
+
+.boite-curseur { padding: 0.5rem 0.6rem 0.4rem; background: #e2d1d1; font-size: 0.86rem; line-height: 1.25; }
+.boite-curseur input[type="range"] { display: block; width: 100%; margin: 0.4rem 0 0; accent-color: #8e1a20; }
+
+.lien-accueil {
+  display: block;
+  padding: 0.55rem 0.6rem;
+  background: #e2d1d1;
+  color: #1f1517;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+}
+
+.lien-accueil:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .bouton.lien { display: block; text-align: center; text-decoration: none; }
 
 .message-ciel {

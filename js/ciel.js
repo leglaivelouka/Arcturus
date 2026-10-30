@@ -590,7 +590,7 @@ void main() {
   float s = max((uHor * c).z, 0.02);
   float masse = 1.0 / (s + 0.025 * exp(-11.0 * s));
   float extinction = pow(10.0, -0.4 * 0.25 * (masse - 1.0));
-  float atmo = mix(1.0, 0.45 * extinction, uAtmo);
+  float atmo = mix(1.0, 0.6 * extinction, uAtmo);
   gl_FragColor = vec4(texture2D(uTex, uv).rgb * uGain * atmo, 1.0);
 }`;
 
@@ -1331,6 +1331,10 @@ void main() {
   const dialogueCarte = $("dialogue-carte");
   $("btn-reglages").addEventListener("click", () => dialogueCarte.showModal());
   $("btn-fermer-carte").addEventListener("click", () => dialogueCarte.close());
+  dialogueCarte.addEventListener("click", (e) => { // un clic à côté du panneau le referme
+    const r = dialogueCarte.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialogueCarte.close();
+  });
   $("mag-limite").addEventListener("input", (e) => {
     reglages.magLimite = borner(parseFloat(e.target.value), 3, 6.5);
     sauverReglages();

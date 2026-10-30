@@ -93,34 +93,42 @@
     </div>
   </aside>
 
-  <dialog id="dialogue-carte" aria-labelledby="titre-carte">
-    <h2 id="titre-carte">Réglages de la carte</h2>
+  <dialog id="dialogue-carte" aria-label="Réglages de la carte">
+    <div class="reglages-tete">
+      <h2 class="pastille-section">Affichage :</h2>
+      <button id="btn-fermer-carte" class="bouton-croix" type="button" aria-label="Fermer les réglages">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 3.5 20.5 20.5M20.5 3.5 3.5 20.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
 
-    <fieldset class="affichage">
-      <legend>Affichage</legend>
-      <label class="case"><input type="checkbox" data-reglage="paysage"><span class="ico-case" aria-hidden="true"></span>Paysage</label>
-      <label class="case"><input type="checkbox" data-reglage="constellations"><span class="ico-case" aria-hidden="true"></span>Constellations</label>
-      <label class="case"><input type="checkbox" data-reglage="atmosphere"><span class="ico-case" aria-hidden="true"></span>Atmosphère</label>
-      <label class="case"><input type="checkbox" data-reglage="noms"><span class="ico-case" aria-hidden="true"></span>Noms des astres</label>
-      <label class="case"><input type="checkbox" data-reglage="lignes"><span class="ico-case" aria-hidden="true"></span>Grille azimutale (azimut et hauteur)</label>
-      <label class="case"><input type="checkbox" data-reglage="grilleEquatoriale"><span class="ico-case" aria-hidden="true"></span>Grille équatoriale (AD et déclinaison)</label>
-      <label class="case"><input type="checkbox" data-reglage="ecliptique"><span class="ico-case" aria-hidden="true"></span>Écliptique (trajet du Soleil)</label>
-      <label class="case"><input type="checkbox" data-reglage="nuit"><span class="ico-case" aria-hidden="true"></span>Mode nuit (écran rouge)</label>
-    </fieldset>
+    <div class="groupe" role="group" aria-label="Affichage">
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="paysage"></span><span class="etiquette"><span>Paysage</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="constellations"></span><span class="etiquette"><span>Constellations</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="atmosphere"></span><span class="etiquette"><span>Atmosphère</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="noms"></span><span class="etiquette"><span>Noms des astres</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="lignes"></span><span class="etiquette"><span>Grille azimutale (azimut et hauteur)</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="grilleEquatoriale"></span><span class="etiquette"><span>Grille équatoriale (AD et déclinaison)</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="ecliptique"></span><span class="etiquette"><span>Écliptique (trajet du Soleil)</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="nuit"></span><span class="etiquette"><span>Mode nuit (écran rouge)</span></span></label>
+    </div>
 
-    <fieldset class="affichage">
-      <legend>Objets du ciel profond</legend>
-      <label class="case"><input type="checkbox" data-reglage="voieLactee"><span class="ico-case" aria-hidden="true"></span>Voie lactée</label>
-      <label class="case"><input type="checkbox" data-reglage="galaxies"><span class="ico-case" aria-hidden="true"></span>Galaxies</label>
-      <label class="case"><input type="checkbox" data-reglage="nebuleuses"><span class="ico-case" aria-hidden="true"></span><span>Nébuleuses <small>(dont planétaires et rémanents)</small></span></label>
-      <label class="case"><input type="checkbox" data-reglage="amas"><span class="ico-case" aria-hidden="true"></span><span>Amas <small>(ouverts et globulaires)</small></span></label>
-    </fieldset>
+    <div class="groupe" role="group" aria-labelledby="titre-profond">
+      <h3 id="titre-profond" class="pastille-section">Objets du ciel profond :</h3>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="voieLactee"></span><span class="etiquette"><span>Voie lactée</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="galaxies"></span><span class="etiquette"><span>Galaxies</span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="nebuleuses"></span><span class="etiquette"><span>Nébuleuses <small>(dont planétaires et rémanents)</small></span></span></label>
+      <label class="ligne-reglage"><span class="onglet"><input type="checkbox" data-reglage="amas"></span><span class="etiquette"><span>Amas <small>(ouverts et globulaires)</small></span></span></label>
+    </div>
 
-    <label class="champ" for="mag-limite">Étoiles visibles jusqu'à la magnitude <output id="mag-valeur">6,5</output></label>
-    <input id="mag-limite" type="range" min="3" max="6.5" step="0.1" value="6.5">
+    <div class="groupe" role="group" aria-labelledby="titre-etoiles">
+      <h3 id="titre-etoiles" class="pastille-section">Étoiles :</h3>
+      <div class="boite-curseur">
+        <label for="mag-limite">Visibles jusqu'à la magnitude <output id="mag-valeur">6,5</output></label>
+        <input id="mag-limite" type="range" min="3" max="6.5" step="0.1" value="6.5">
+      </div>
+    </div>
 
-    <a class="bouton lien" href="index.html">retour à l'accueil</a>
-    <button id="btn-fermer-carte" class="bouton discret" type="button">Fermer</button>
+    <a class="lien-accueil" href="index.html">retour à l'accueil</a>
   </dialog>
 
   <div id="voile" class="voile" hidden></div>
