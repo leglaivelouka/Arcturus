@@ -967,6 +967,36 @@ void main() {
     }
   }
 
+  /* Un sprite par teinte : halo de la couleur de l'étoile, plus la couleur du centre lumineux. */
+  const spritesEtoiles = new Map();
+  function aspectEtoile(couleur) {
+    const deja = spritesEtoiles.get(couleur);
+    if (deja) return deja;
+    const m = couleur.match(/\d+/g);
+    const r = +m[0], g = +m[1], b = +m[2];
+    const melange = (k) => [(r + (255 - r) * k) | 0, (g + (255 - g) * k) | 0, (b + (255 - b) * k) | 0];
+    const S = 64;
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const g2 = c.getContext("2d");
+    const o = S / 2;
+    const grad = g2.createRadialGradient(o, o, 0, o, o, o);
+    const clair = melange(0.72);
+    grad.addColorStop(0, `rgba(${clair[0]},${clair[1]},${clair[2]},1)`);
+    grad.addColorStop(0.22, `rgba(${r},${g},${b},0.95)`);
+    grad.addColorStop(0.45, `rgba(${r},${g},${b},0.55)`);
+    grad.addColorStop(0.75, `rgba(${r},${g},${b},0.16)`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    g2.fillStyle = grad;
+    g2.beginPath();
+    g2.arc(o, o, o, 0, DEUX_PI);
+    g2.fill();
+    const coeur = melange(0.88);
+    const aspect = { sprite: c, coeur: `rgb(${coeur[0]},${coeur[1]},${coeur[2]})` };
+    spritesEtoiles.set(couleur, aspect);
+    return aspect;
+  }
+
   function dessiner() {
     aRedessiner = false;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -1009,10 +1039,11 @@ void main() {
     if (reglages.grilleEquatoriale) dessinerGrilleEquatoriale(MD, echelle, cx, cy);
     if (reglages.ecliptique) dessinerEcliptique(MD, maintenant, echelle, cx, cy);
 
-    /* Étoiles */
+    /* Étoiles : même teinte qu'avant, mais un centre éclairci et un halo qui s'éteint. */
     const limite = reglages.atmosphere ? Astro.magnitudeLimite(hauteurSoleil, reglages.magLimite) : reglages.magLimite;
     if (reglages.galaxies || reglages.nebuleuses || reglages.amas) dessinerProfond(MJ, echelle, cx, cy, limite);
     let couleur = "";
+    let aspect = null;
     for (let i = 0; i < etoiles.n; i++) {
       const mag = etoiles.mag[i];
       if (mag > limite) continue;
@@ -1024,16 +1055,19 @@ void main() {
       const k = (2 / (1 + zc)) * echelle;
       const sx = cx + (MJ[0] * x + MJ[1] * y + MJ[2] * z) * k;
       const sy = cy - (MJ[3] * x + MJ[4] * y + MJ[5] * z) * k;
-      if (sx < -6 || sx > largeur + 6 || sy < -6 || sy > hauteur + 6) continue;
+      if (sx < -28 || sx > largeur + 28 || sy < -28 || sy > hauteur + 28) continue;
 
       const rayon = Math.max(0.45, Math.min(4.2, 3.4 - 0.46 * mag)) * boost;
       ctx.globalAlpha = Math.min(borner(1.25 - 0.13 * mag, 0.5, 1), borner(limite - mag + 0.5, 0, 1));
       if (etoiles.couleur[i] !== couleur) {
         couleur = etoiles.couleur[i];
-        ctx.fillStyle = couleur;
+        aspect = aspectEtoile(couleur);
       }
+      const d = rayon * 3.2;
+      ctx.drawImage(aspect.sprite, sx - d, sy - d, d * 2, d * 2);
+      ctx.fillStyle = aspect.coeur;
       ctx.beginPath();
-      ctx.arc(sx, sy, rayon, 0, DEUX_PI);
+      ctx.arc(sx, sy, Math.max(0.55, rayon * 0.38), 0, DEUX_PI);
       ctx.fill();
     }
     ctx.globalAlpha = 1;

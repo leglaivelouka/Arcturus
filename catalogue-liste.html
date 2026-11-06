@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <link rel="preload" as="image" href="assets/chargement.webp">
+  <link rel="stylesheet" href="css/splash.css">
+  <script src="js/splash.js"></script>
+  <noscript><style>#splash { display: none; }</style></noscript>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0718">
+  <title>Arcturus : Catalogue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="theme-rouge">
+  <div id="splash" role="status" aria-label="Chargement en cours">
+    <div class="splash-cadre">
+      <img class="splash-image" src="assets/chargement.webp" alt="">
+      <div class="splash-anneau"></div>
+    </div>
+  </div>
+
+  <main class="ecran">
+    <a class="retour" href="catalogue.html">catalogue</a>
+    <h1 id="titre-liste" class="titre">Catalogue</h1>
+    <input id="filtre" class="filtre" type="search" placeholder="Rechercher" autocomplete="off" aria-label="Rechercher dans la liste">
+    <p id="compte" class="compte" aria-live="polite"></p>
+    <ul id="liste" class="liste-catalogue"></ul>
+
+    <nav class="barre" aria-label="Navigation principale">
+      <a href="catalogue.html"><span class="icone" aria-hidden="true">𖤘</span>catalogue</a>
+      <a href="settings.html"><span class="icone" aria-hidden="true">⚙</span>settings</a>
+      <a href="forum.html"><span class="icone" aria-hidden="true">✵</span>forum</a>
+    </nav>
+  </main>
+
+  <script src="js/catalogue.js"></script>
+</body>
+</html>
