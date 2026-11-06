@@ -71,11 +71,11 @@ body.nuit #paysage { filter: grayscale(1); }
   gap: 0.28rem;
   border: 0;
   border-radius: 16px;
-  background: linear-gradient(135deg, #a9e3c4, #9db7ea);
+  background: linear-gradient(to bottom, rgba(94, 0, 6, 0.94), rgba(150, 16, 19, 0.94));
   cursor: pointer;
 }
 
-.menu span { display: block; width: 1.2rem; height: 2px; background: #14202e; border-radius: 2px; }
+.menu span { display: block; width: 1.2rem; height: 2px; background: #000000; border-radius: 2px; }
 
 .panneau {
   position: fixed;
@@ -90,13 +90,22 @@ body.nuit #paysage { filter: grayscale(1); }
   color: #14202e;
 }
 
-.temps {
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
+/* Même langage que le panneau de droite : fond rosé, bord dégradé bordeaux, coin bas-gauche arrondi. */
+.temps,
+.barre-heure,
+.engrenage {
+  border: 0.18rem solid transparent;
+  background:
+    linear-gradient(#e2d1d1, #e2d1d1) padding-box,
+    linear-gradient(to bottom, rgba(104, 20, 26, 0.94), rgba(204, 42, 46, 0.94)) border-box;
+  color: #1f1517;
 }
 
+.temps,
+.barre-heure { border-radius: 0.25rem 0.25rem 0.25rem 1rem; }
+
 .fleches button:focus-visible,
-.engrenage:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
+.engrenage:focus-visible { outline: 3px solid #8e1a20; outline-offset: 2px; }
 
 .bas-panneau { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 
@@ -121,13 +130,9 @@ body.nuit #paysage { filter: grayscale(1); }
   touch-action: manipulation;
 }
 
-.barre-heure {
-  padding: 0.5rem 0.9rem 0.4rem;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
-}
+.barre-heure { padding: 0.5rem 0.9rem 0.4rem; }
 
-.barre-heure input[type="range"] { display: block; width: 100%; margin: 0.2rem 0; accent-color: #1d2f5e; touch-action: pan-y; }
+.barre-heure input[type="range"] { display: block; width: 100%; margin: 0.2rem 0; accent-color: #8e1a20; touch-action: pan-y; }
 
 .entete-vitesse { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.8rem; font-weight: 500; }
 .entete-vitesse output { font-variant-numeric: tabular-nums; text-align: right; }
@@ -145,11 +150,9 @@ body.nuit #paysage { filter: grayscale(1); }
 
 .engrenage {
   width: 3rem;
-  height: 3rem;
-  border: 0;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(172, 232, 202, 0.93), rgba(160, 186, 242, 0.93));
-  font-size: 1.5rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -309,8 +312,9 @@ body.nuit #paysage { filter: grayscale(1); }
   padding: 0.9rem 1rem 1rem;
   overflow-y: auto;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(172, 232, 202, 0.96), rgba(160, 186, 242, 0.96));
-  color: #14202e;
+  background: linear-gradient(to bottom, rgba(104, 20, 26, 0.94), rgba(204, 42, 46, 0.94));
+  color: #e2d1d1;
+  scrollbar-color: #e2d1d1 rgba(80, 16, 20, 0.45);
 }
 
 .fiche-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6rem; }
@@ -323,9 +327,9 @@ body.nuit #paysage { filter: grayscale(1); }
   height: 2.2rem;
   border: 0;
   border-radius: 50%;
-  background: rgba(20, 32, 46, 0.12);
+  background: #c3b6b6;
   font-size: 1rem;
-  color: inherit;
+  color: #1f1517;
   cursor: pointer;
 }
 
@@ -343,6 +347,6 @@ body.nuit #paysage { filter: grayscale(1); }
 .fiche-note { margin-bottom: 0.8rem; font-size: 0.85rem; font-weight: 500; }
 
 .fiche-actions { display: flex; gap: 0.6rem; }
-.fiche .bouton { flex: 1; color: #fff; }
-.fiche .bouton:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
-.fiche-x:focus-visible { outline: 3px solid #14202e; outline-offset: 2px; }
+.fiche .bouton { flex: 1; background: #e2d1d1; color: #1f1517; }
+.fiche .bouton:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.fiche-x:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
