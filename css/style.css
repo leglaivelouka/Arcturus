@@ -281,6 +281,16 @@ body.theme-rouge dialog {
 }
 
 /* ---------- Catalogue ---------- */
+.bouton-retour {
+  align-self: flex-start;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(190, 27, 27, 0.95), rgba(48, 6, 9, 0.96));
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
 .choix-catalogue {
   width: 100%;
   display: grid;
